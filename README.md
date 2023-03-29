@@ -21,4 +21,4 @@ e muito mais.
 > 
 > > Mais se precisar executa-lo novamente basta executar o comando: <kbd>**sudo lamp**</kbd> .
 
-!!!!Não Esqueça de me seguir github e de marcar uma estrela no projeto, pois isso ajuda o projeto a ficar vísivel para mais pessoas.
+!!!! Não Esqueça de me seguir github e de marcar uma estrela no projeto, pois isso ajuda o projeto a ficar vísivel para mais pessoas.
