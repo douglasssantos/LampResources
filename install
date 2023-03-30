@@ -26,3 +26,4 @@ echo
 echo "============================"
 echo "Executando Lamp!..."
 echo "============================"
+sudo lamp
