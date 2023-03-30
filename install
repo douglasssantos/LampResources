@@ -3,23 +3,28 @@
 # Created by: Douglas S. Santos
 # E-mail: douglassantos2127@gmail.com
 # whatsapp: +55 21 97553-3534
-
+clear
 echo "============================"
 echo "Aplicando Permissões!..."
 sudo chmod +x ./lamp
 echo "============================"
 echo
 echo "============================"
+echo
 echo "Instalando o Lamp!..."
-sudo mv ./lamp /usr/local/bin/lamp
+echo
+sudo cp -u -v ./lamp /usr/local/bin/lamp
+echo
 echo "============================"
 echo
 echo "============================"
 echo "Lamp Instalado com sucesso!..."
+echo "============================"
 echo
 echo "Para usar o lamp basta digitar o comando: sudo lamp"
 echo
 echo "Presione enter para continuar."
+echo
 echo "============================"
 read -r
 echo
