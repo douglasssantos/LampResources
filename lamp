@@ -184,6 +184,10 @@ InstalarLamp(){
   sudo ufw app info "Apache Full" && ufw allow "Apache Full"
   echo "============================"
   echo
+  echo "Instalando net-tools!..."
+  sudo apt install -y net-tools
+  echo "============================"
+  echo
   echo "Ativação de Módulos"
   sudo a2enmod headers && a2enmod rewrite && a2enmod expires
   echo "============================"
@@ -213,7 +217,8 @@ InstalarLamp(){
   echo "============================"
   echo
   echo "Adicionando o Repositório do PHP!..."
-  sudo add-apt-repository ppa:ondrej/php
+  sudo apt install -y ppa-purge
+  sudo add-apt-repository ppa:ondrej/php -y
   echo "============================"
   echo
   InstalarVersaoPhpLamp
@@ -233,6 +238,11 @@ DesinstalarLamp(){
   sudo ufw deny "Apache Full"
   echo "============================"
   echo
+  echo "Desinstalando o net-tools!..."
+  sudo apt remove -y net-tools
+  sudo apt purge -y net-tools
+  echo "============================"
+  echo
   echo "Desinstalando o PHP"
   sudo apt remove -y php*
   sudo apt purge -y php*
@@ -248,20 +258,20 @@ DesinstalarLamp(){
   echo "============================"
   echo
   echo "Desinstalando o Certbot"
-  sudo apt-get remove -y certbot
-  sudo apt-get purge -y certbot
+  sudo apt remove -y certbot
+  sudo apt purge -y certbot
   echo "============================"
   echo
   echo "Desinstalando o NMAP"
-  sudo apt-get remove -y nmap
-  sudo apt-get purge -y nmap
+  sudo apt remove -y nmap
+  sudo apt purge -y nmap
   echo "============================"
   echo
   echo "Desinstalando Curl e Wget"
-  sudo apt-get remove -y curl
-  sudo apt-get purge -y curl
-  sudo apt-get remove -y wget
-  sudo apt-get purge -y wget
+  sudo apt remove -y curl
+  sudo apt purge -y curl
+  sudo apt remove -y wget
+  sudo apt purge -y wget
   echo "============================"
   echo
   echo "Desinstalando as propriedades de repositório!..."
@@ -270,7 +280,9 @@ DesinstalarLamp(){
   echo "============================"
   echo
   echo "Removendo o Repositório do PHP!..."
+  sudo apt remove -y ppa-purge
   sudo add-apt-repository --remove -y ppa:ondrej/php
+  sudo ppa-purge -y ppa:ondrej/php
   echo "============================"
   echo
   echo
