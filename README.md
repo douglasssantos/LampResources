@@ -12,6 +12,13 @@ alem dos mencionados a cima, com ele você pode instalar outras versões do php 
 e muito mais.
 
 
-Para instalar o lamp basta clonar o repositório e mover o arquivo lamp para a pasta >> **/usr/local/bin**
+>Para instalar o lamp basta clonar o repositório em seguida acesse a pasta onde o repositório foi clonado.  
+> > Passo 1: Após acessar a pasta execute o comando: <kbd>**sudo chmod +x install**</kbd>  
+> 
+> > Passo 2: depois execute o comando: <kbd>**sudo ./install**</kbd> 
+> 
+> > **após finalizar todas os passos o lamp irá ser executado automáticamento.**  
+> 
+> > Mais se precisar executa-lo novamente basta executar o comando: <kbd>**sudo lamp**</kbd> .
 
-após ter movido o arquivo para a pasta global do linux, basta executar o comando **sudo lamp**
+!!!!Não Esqueça de me seguir github e de marcar uma estrela no projeto, pois isso ajuda o projeto a ficar vísivel para mais pessoas.
