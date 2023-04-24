@@ -13,9 +13,15 @@ e muito mais.
 
 
 >Para instalar o lamp basta clonar o repositório em seguida acesse a pasta onde o repositório foi clonado.  
-> > Passo 1: Após acessar a pasta execute o comando: <kbd>**sudo chmod +x install**</kbd>  
+> > Passo 1: Clone o Lamp: <kbd>**https://github.com/douglasssantos/LampResources.git**</kbd>  
 > 
-> > Passo 2: depois execute o comando: <kbd>**sudo ./install**</kbd> 
+> > Passo 2: Acesse a pasta do lamp: <kbd>**cd LampResources/**</kbd>  
+> 
+> > Passo 3: execute o comando: <kbd>**sudo chmod +x ./install**</kbd>  
+> 
+> > Passo 4: execute o comando: <kbd>**sudo chmod +x ./lamp**</kbd>  
+> 
+> > Passo 5: depois execute o comando: <kbd>**sudo ./install**</kbd> 
 > 
 > > **após finalizar todas os passos o lamp irá ser executado automáticamento.**  
 > 
