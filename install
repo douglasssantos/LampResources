@@ -13,7 +13,7 @@ echo "============================"
 echo
 echo "Instalando o Lamp!..."
 echo
-sudo cp -u -v ./lamp /usr/local/bin/lamp
+sudo cp -v ./lamp /usr/local/bin/lamp
 echo
 echo "============================"
 echo
