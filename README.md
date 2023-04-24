@@ -13,7 +13,7 @@ e muito mais.
 
 
 >Para instalar o lamp basta clonar o repositório em seguida acesse a pasta onde o repositório foi clonado.  
-> > Passo 1: Clone o Lamp com o comando: <kbd>**git clone 'https://github.com/douglasssantos/LampResources.git'**</kbd>  
+> > Passo 1: Clone o Lamp com o comando: <kbd>**git clone https://github.com/douglasssantos/LampResources.git**</kbd>  
 > 
 > > Passo 2: Acesse a pasta do lamp: <kbd>**cd LampResources/**</kbd>  
 > 
