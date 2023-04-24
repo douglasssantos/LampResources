@@ -300,9 +300,13 @@ AdicionarDominioOnline(){
   echo -n " >>> Digite o nome do dominio: "
   read dominio
   echo "============================"
+  echo
+  echo -n " >>> Qual a pasta root dentro projeto: "
+  read path
+  echo "============================"
   vhostconf="
   <VirtualHost *:80>\n
-      <Directory /var/www/$dominio>\n
+      <Directory /var/www/$dominio$path>\n
           Options Indexes FollowSymLinks\n
           AllowOverride All\n
           Require all granted\n
@@ -311,7 +315,7 @@ AdicionarDominioOnline(){
        ServerAdmin webmaster@$dominio\n
        ServerName $dominio\n
        ServerAlias www.$dominio\n
-       DocumentRoot /var/www/$dominio\n
+       DocumentRoot /var/www/$dominio$path\n
        ErrorLog ${APACHE_LOG_DIR}/error.log\n
        CustomLog ${APACHE_LOG_DIR}/access.log combined\n
   </VirtualHost>"
@@ -355,7 +359,7 @@ AdicionarDominioOnline(){
   #sudo systemctl status apache2
   echo "============================"
   echo
-  ipserver="$(curl ifconfig.me)"
+  ipserver="$(hostname -I | awk '{print $1}')"
   echo "Configurar Arquivo de Hosts Locais"
   echo "IP Server: $ipserver"
   sudo echo -e "127.0.0.1         $dominio www.$dominio" >> /etc/hosts
@@ -420,9 +424,13 @@ AdicionarDominioLocal(){
   echo -n " >>> Digite o nome do dominio: "
   read dominio
   echo "============================"
+  echo
+  echo -n " >>> Qual a pasta root dentro projeto: "
+  read path
+  echo "============================"
   vhostconf="
   <VirtualHost *:80>\n
-      <Directory /var/www/$dominio>\n
+      <Directory /var/www/$dominio$path>\n
           Options Indexes FollowSymLinks\n
           AllowOverride All\n
           Require all granted\n
@@ -430,7 +438,7 @@ AdicionarDominioLocal(){
 
        ServerAdmin webmaster@$dominio\n
        ServerName $dominio\n
-       DocumentRoot /var/www/$dominio\n
+       DocumentRoot /var/www/$dominio$path\n
        ErrorLog ${APACHE_LOG_DIR}/error.log\n
        CustomLog ${APACHE_LOG_DIR}/access.log combined\n
   </VirtualHost>"
@@ -474,10 +482,10 @@ AdicionarDominioLocal(){
   #sudo systemctl status apache2
   echo "============================"
   echo
-  ipserver="$(curl ifconfig.me)"
+  ipserver="$(hostname -I | awk '{print $1}')"
   echo "Configurar Arquivo de Hosts Locais"
   echo "IP Server: $ipserver"
-  sudo echo -e "127.0.0.1         $dominio" >> /etc/hosts
+  sudo echo -e "$ipserver         $dominio" >> /etc/hosts
 #  sudo echo -e "$dominio www.$dominio" >> /var/www/domains.txt
   echo "Hosts configurado com sucesso!"
   echo "============================"
@@ -904,6 +912,53 @@ VersaoAtivaDoNodeNativo(){
   MenuNode
 }
 
+ClonarRepositorioGit(){
+    echo
+    echo -n " >>> Digite o nome do dominio (sem http://): "
+    read dominio
+    sudo rm -R /var/www/$dominio/*
+    sudo rm -R /var/www/$dominio
+    echo "===================================="
+    echo
+    echo -n " >>> Insira o link do repositório git: "
+    read repositorio
+    echo "===================================="
+    echo
+    echo -n " >>> Qual a branch: "
+    read branch
+    echo "===================================="
+    echo
+    if [[ -z "$branch" ]]; then
+      git clone $repositorio /var/www/$dominio
+    else
+      git clone -b $branch $repositorio /var/www/$dominio
+    fi
+    echo
+    echo "===================================="
+    echo
+    echo "Repositório clonado com sucesso...  "
+    echo
+    echo "===================================="
+    echo
+    cd "/var/www/$dominio/"
+    echo "===================================="
+    echo
+    echo "Rodando o composer...  "
+    composer install
+    echo
+    echo "===================================="
+    echo "===================================="
+    echo
+    echo "Rodando o npm...  "
+    npm install
+    echo
+    echo "===================================="
+    echo
+    echo "Digite enter para voltar ao Menu Principal"
+    read
+    MenuNode
+}
+
 Sair() {
    echo
    echo " Finalizando..."
@@ -1031,7 +1086,8 @@ Menu(){
   echo " [2] PHP "
   echo " [3] NODE"
   echo " [4] Instalar Composer"
- 
+  echo " [5] Clonar Repositório Git"
+
   echo " [0] Sair "
   echo
   echo -n " >>> Digite a Opcao: "
@@ -1042,6 +1098,7 @@ Menu(){
     2) MenuPHP;;
     3) MenuNode;;
     4) InstalarComposer;;
+    5) ClonarRepositorioGit;;
     0) Sair;;
     *) "Opcao Invalida!" ; echo ; Menu ;;
   esac
