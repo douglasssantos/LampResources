@@ -8,6 +8,18 @@
 email="webmaster@gmail.com"
 clear
 
+adicionarRepoPhp(){
+  echo "Instalando as propriedades de repositório!..."
+  sudo apt install -y software-properties-common
+  echo "============================"
+  echo
+  echo "Adicionando o Repositório do PHP!..."
+  sudo apt install -y ppa-purge
+  sudo add-apt-repository ppa:ondrej/php -y
+  echo "============================"
+  MenuPHP
+}
+
 InstalarVersaoPhp(){
 
   echo
@@ -956,7 +968,7 @@ ClonarRepositorioGit(){
     echo
     echo "Digite enter para voltar ao Menu Principal"
     read
-    MenuNode
+    Menu
 }
 
 Sair() {
@@ -1019,6 +1031,7 @@ MenuPHP(){
   echo " [3] Listar Versões do PHP Instaladas"
   echo " [4] Habilitar outra versão do PHP"
   echo " [5] Desinstalar versões do PHP"
+  echo " [6] Instalar Repositório/PPA do PHP"
   echo " [0] Sair "
   echo
   echo -n " >>> Digite a Opcao: "
@@ -1030,6 +1043,7 @@ MenuPHP(){
     3) ListarVersoesInstaladasPHP;;
     4) UsarOutraVersaoPHP;;
     5) ListarVersoesNodeInstaladas;;
+    6) adicionarRepoPhp;;
     0) Menu;;
     *) "Opcao Invalida!" ; echo ; MenuPHP ;;
   esac
