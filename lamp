@@ -929,7 +929,6 @@ ClonarRepositorioGit(){
     echo -n " >>> Digite o nome do dominio (sem http://): "
     read dominio
     sudo rm -R /var/www/$dominio/*
-    sudo rm -R /var/www/$dominio
     echo "===================================="
     echo
     echo -n " >>> Insira o link do repositório git: "
