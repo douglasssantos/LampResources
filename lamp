@@ -174,6 +174,520 @@ DesinstalarPHP(){
   read
   MenuPHP
 }
+InstalarRedis(){
+  echo
+  echo "Atualizando Repositórios do Linux!..."
+  sudo apt update
+  echo "============================"
+  echo
+  echo "Instalando Redis!..."
+  sudo apt install -y redis-server
+  echo "============================"
+  echo
+  echo "Habilitando Redis para iniciar com o sistema!..."
+  sudo systemctl enable redis-server.service
+  sudo systemctl start redis-server.service
+  echo "============================"
+  echo
+  echo "Redis instalado e iniciado com sucesso!"
+  echo "============================"
+  echo
+  echo "Digite enter para voltar ao Menu"
+  read
+  MenuRedis
+}
+DesinstalarRedis(){
+  echo
+  echo "Desinstalando Redis!..."
+  sudo systemctl stop redis-server.service
+  sudo apt remove -y redis-server
+  sudo apt purge -y redis-server
+  sudo apt autoremove -y
+  echo "============================"
+  echo
+  echo "Redis desinstalado com sucesso!"
+  echo "============================"
+  echo
+  echo "Digite enter para voltar ao Menu"
+  read
+  MenuRedis
+}
+IniciarRedis(){
+  echo
+  echo "Iniciando Redis!..."
+  sudo systemctl start redis-server.service
+  echo "============================"
+  echo
+  echo "Digite enter para voltar ao Menu"
+  read
+  MenuRedis
+}
+PararRedis(){
+  echo
+  echo "Parando Redis!..."
+  sudo systemctl stop redis-server.service
+  echo "============================"
+  echo
+  echo "Digite enter para voltar ao Menu"
+  read
+  MenuRedis
+}
+ReiniciarRedis(){
+  echo
+  echo "Reiniciando Redis!..."
+  sudo systemctl restart redis-server.service
+  echo "============================"
+  echo
+  echo "Digite enter para voltar ao Menu"
+  read
+  MenuRedis
+}
+StatusRedis(){
+  echo
+  echo "============================"
+  echo "       Status do Redis      "
+  echo "============================"
+  sudo systemctl status redis-server.service
+  echo "============================"
+  echo
+  echo "Digite enter para voltar ao Menu"
+  read
+  MenuRedis
+}
+InfoRedis(){
+  echo
+  echo "============================"
+  echo "   Informações do Redis     "
+  echo "============================"
+  redis-cli info server 2>/dev/null || echo "Redis não está rodando ou não está instalado."
+  echo "============================"
+  echo
+  echo "Digite enter para voltar ao Menu"
+  read
+  MenuRedis
+}
+TestarRedis(){
+  echo
+  echo "============================"
+  echo "   Teste de conexão Redis   "
+  echo "============================"
+  result=$(redis-cli ping 2>/dev/null)
+  if [[ "$result" == "PONG" ]]; then
+    echo " Redis respondeu: PONG — conexão OK!"
+  else
+    echo " Redis não respondeu. Verifique se o serviço está rodando."
+  fi
+  echo "============================"
+  echo
+  echo "Digite enter para voltar ao Menu"
+  read
+  MenuRedis
+}
+LimparCacheRedis(){
+  echo
+  echo -n " >>> Tem certeza que deseja limpar todo o cache do Redis? (y/n): "
+  read confirm
+  echo "============================"
+  if [[ "$confirm" == "y" || "$confirm" == "Y" ]]; then
+    redis-cli FLUSHALL
+    echo "Cache do Redis limpo com sucesso!"
+  else
+    echo "Operação cancelada."
+  fi
+  echo "============================"
+  echo
+  echo "Digite enter para voltar ao Menu"
+  read
+  MenuRedis
+}
+
+InstalarPostgres(){
+  echo
+  echo "Atualizando Repositórios do Linux!..."
+  sudo apt update
+  echo "============================"
+  echo
+  echo "Instalando PostgreSQL!..."
+  sudo apt install -y postgresql postgresql-contrib
+  echo "============================"
+  echo
+  echo "Iniciando Serviços do PostgreSQL!..."
+  sudo systemctl start postgresql.service
+  sudo systemctl enable postgresql.service
+  echo "============================"
+  echo
+  echo "PostgreSQL instalado e iniciado com sucesso!"
+  echo "============================"
+  echo
+  echo "Digite enter para voltar ao Menu"
+  read
+  MenuPostgres
+}
+DesinstalarPostgres(){
+  echo
+  echo "Desinstalando PostgreSQL!..."
+  sudo systemctl stop postgresql.service
+  sudo apt --purge remove -y postgresql postgresql-*
+  sudo rm -rf /var/lib/postgresql/
+  sudo rm -rf /var/log/postgresql/
+  sudo rm -rf /etc/postgresql/
+  sudo deluser postgres 2>/dev/null || true
+  echo "============================"
+  echo
+  echo "Limpando resíduos da instalação!..."
+  sudo apt autoclean -y && sudo apt --purge autoremove -y
+  echo "============================"
+  echo
+  echo "PostgreSQL desinstalado com sucesso!"
+  echo "============================"
+  echo
+  echo "Digite enter para voltar ao Menu"
+  read
+  MenuPostgres
+}
+IniciarPostgres(){
+  echo
+  echo "Iniciando PostgreSQL!..."
+  sudo systemctl start postgresql.service
+  echo "============================"
+  echo
+  echo "Digite enter para voltar ao Menu"
+  read
+  MenuPostgres
+}
+PararPostgres(){
+  echo
+  echo "Parando PostgreSQL!..."
+  sudo systemctl stop postgresql.service
+  echo "============================"
+  echo
+  echo "Digite enter para voltar ao Menu"
+  read
+  MenuPostgres
+}
+ReiniciarPostgres(){
+  echo
+  echo "Reiniciando PostgreSQL!..."
+  sudo systemctl restart postgresql.service
+  echo "============================"
+  echo
+  echo "Digite enter para voltar ao Menu"
+  read
+  MenuPostgres
+}
+StatusPostgres(){
+  echo
+  echo "============================"
+  echo "     Status do PostgreSQL   "
+  echo "============================"
+  sudo systemctl status postgresql.service
+  echo "============================"
+  echo
+  echo "Digite enter para voltar ao Menu"
+  read
+  MenuPostgres
+}
+CriarUsuarioPostgres(){
+  echo
+  echo -n " >>> Digite o nome do usuário: "
+  read pguser
+  echo "============================"
+  echo -n " >>> Digite a senha do usuário: "
+  read -s pgpass
+  echo
+  echo "============================"
+  echo "Criando usuário $pguser no PostgreSQL!..."
+  sudo -u postgres psql -c "CREATE USER $pguser WITH PASSWORD '$pgpass';"
+  echo "============================"
+  echo
+  echo "Usuário $pguser criado com sucesso!"
+  echo "============================"
+  echo
+  echo "Digite enter para voltar ao Menu"
+  read
+  MenuPostgres
+}
+CriarBancoDadosPostgres(){
+  echo
+  echo -n " >>> Digite o nome do banco de dados: "
+  read pgdb
+  echo "============================"
+  echo -n " >>> Digite o dono do banco (usuário postgres): "
+  read pgowner
+  echo "============================"
+  echo "Criando banco de dados $pgdb!..."
+  sudo -u postgres psql -c "CREATE DATABASE $pgdb OWNER $pgowner;"
+  echo "============================"
+  echo
+  echo "Banco $pgdb criado com sucesso!"
+  echo "============================"
+  echo
+  echo "Digite enter para voltar ao Menu"
+  read
+  MenuPostgres
+}
+ListarBancosPostgres(){
+  echo
+  echo "============================"
+  echo "  Bancos de dados no PostgreSQL  "
+  echo "============================"
+  sudo -u postgres psql -c "\l"
+  echo "============================"
+  echo
+  echo "Digite enter para voltar ao Menu"
+  read
+  MenuPostgres
+}
+BackupBancoPostgres(){
+  echo
+  echo -n " >>> Digite o nome do banco de dados: "
+  read pgdb
+  echo "============================"
+  timestamp=$(date +"%Y%m%d_%H%M%S")
+  backupfile="/var/backups/pg_${pgdb}_${timestamp}.sql"
+  sudo mkdir -p /var/backups
+  echo "Criando backup do banco $pgdb!..."
+  sudo -u postgres pg_dump $pgdb > $backupfile
+  echo "============================"
+  echo
+  if [ -f "$backupfile" ]; then
+    tamanho=$(du -sh $backupfile | awk '{print $1}')
+    echo " Backup criado com sucesso!"
+    echo " Arquivo: $backupfile"
+    echo " Tamanho: $tamanho"
+  else
+    echo " Falha ao criar o backup!"
+  fi
+  echo "============================"
+  echo
+  echo "Digite enter para voltar ao Menu"
+  read
+  MenuPostgres
+}
+RestaurarBancoPostgres(){
+  echo
+  echo "============================"
+  echo "  Backups disponíveis em /var/backups  "
+  echo "============================"
+  ls /var/backups/pg_*.sql 2>/dev/null || echo "Nenhum backup de banco encontrado."
+  echo "============================"
+  echo
+  echo -n " >>> Digite o caminho completo do arquivo .sql: "
+  read backupfile
+  echo "============================"
+  echo -n " >>> Digite o nome do banco de destino: "
+  read pgdb
+  echo "============================"
+  echo "Restaurando banco $pgdb!..."
+  sudo -u postgres psql -c "CREATE DATABASE $pgdb;" 2>/dev/null || true
+  sudo -u postgres psql $pgdb < $backupfile
+  echo "============================"
+  echo " Banco $pgdb restaurado com sucesso!"
+  echo "============================"
+  echo
+  echo "Digite enter para voltar ao Menu"
+  read
+  MenuPostgres
+}
+DeletarUsuarioPostgres(){
+  echo
+  echo -n " >>> Digite o nome do usuário a deletar: "
+  read pguser
+  echo "============================"
+  echo "Deletando usuário $pguser!..."
+  sudo -u postgres psql -c "DROP USER IF EXISTS $pguser;"
+  echo "============================"
+  echo " Usuário $pguser deletado!"
+  echo "============================"
+  echo
+  echo "Digite enter para voltar ao Menu"
+  read
+  MenuPostgres
+}
+DeletarBancoPostgres(){
+  echo
+  echo -n " >>> Digite o nome do banco a deletar: "
+  read pgdb
+  echo "============================"
+  echo -n " >>> Tem certeza? Isso é IRREVERSÍVEL! (y/n): "
+  read confirm
+  echo "============================"
+  if [[ "$confirm" == "y" || "$confirm" == "Y" ]]; then
+    echo "Deletando banco $pgdb!..."
+    sudo -u postgres psql -c "DROP DATABASE IF EXISTS $pgdb;"
+    echo " Banco $pgdb deletado!"
+  else
+    echo "Operação cancelada."
+  fi
+  echo "============================"
+  echo
+  echo "Digite enter para voltar ao Menu"
+  read
+  MenuPostgres
+}
+
+InformacoesServidor(){
+  echo
+  echo "============================================="
+  echo "         Informações do Servidor             "
+  echo "============================================="
+  echo
+  echo "--- Sistema Operacional ---"
+  lsb_release -a 2>/dev/null || cat /etc/os-release
+  echo
+  echo "--- Uptime ---"
+  uptime
+  echo
+  echo "--- Uso de Memória ---"
+  free -h
+  echo
+  echo "--- Uso de Disco ---"
+  df -h
+  echo
+  echo "--- Endereços IP ---"
+  hostname -I
+  echo
+  echo "--- CPU ---"
+  lscpu | grep -E "^(Model name|CPU\(s\)|Thread|Architecture)" 2>/dev/null || cat /proc/cpuinfo | grep "model name" | head -1
+  echo
+  echo "--- Versões Instaladas ---"
+  echo -n "  Apache:    "; apache2 -v 2>/dev/null | head -1 || echo "não instalado"
+  echo -n "  PHP:       "; php -v 2>/dev/null | head -1 || echo "não instalado"
+  echo -n "  Node:      "; node -v 2>/dev/null || echo "não instalado"
+  echo -n "  NPM:       "; npm -v 2>/dev/null || echo "não instalado"
+  echo -n "  Composer:  "; composer --version 2>/dev/null | head -1 || echo "não instalado"
+  echo -n "  PostgreSQL:"; psql --version 2>/dev/null || echo "não instalado"
+  echo -n "  Redis:     "; redis-server --version 2>/dev/null || echo "não instalado"
+  echo
+  echo "============================================="
+  echo
+  echo "Digite enter para voltar ao Menu"
+  read
+  MenuSistema
+}
+AtualizarSistema(){
+  echo
+  echo "Atualizando o sistema!..."
+  sudo apt update
+  echo "============================"
+  sudo apt upgrade -y
+  echo "============================"
+  echo
+  echo "Limpando resíduos!..."
+  sudo apt autoclean -y && sudo apt --purge autoremove -y
+  echo "============================"
+  echo
+  echo "Sistema atualizado com sucesso!"
+  echo "============================"
+  echo
+  echo "Digite enter para voltar ao Menu"
+  read
+  MenuSistema
+}
+VerPortasEmUso(){
+  echo
+  echo "============================"
+  echo "     Portas em uso          "
+  echo "============================"
+  sudo ss -tlnp 2>/dev/null || sudo netstat -tlnp 2>/dev/null
+  echo "============================"
+  echo
+  echo "Digite enter para voltar ao Menu"
+  read
+  MenuSistema
+}
+VerServicosAtivos(){
+  echo
+  echo "============================"
+  echo "     Serviços do Stack      "
+  echo "============================"
+  echo
+  echo "--- Apache ---"
+  sudo systemctl is-active apache2 2>/dev/null && echo "  Status: ATIVO" || echo "  Status: INATIVO"
+  echo
+  echo "--- PostgreSQL ---"
+  sudo systemctl is-active postgresql 2>/dev/null && echo "  Status: ATIVO" || echo "  Status: INATIVO"
+  echo
+  echo "--- Redis ---"
+  sudo systemctl is-active redis-server 2>/dev/null && echo "  Status: ATIVO" || echo "  Status: INATIVO"
+  echo
+  echo "============================"
+  echo
+  echo "Digite enter para voltar ao Menu"
+  read
+  MenuSistema
+}
+LimparLogsSistema(){
+  echo
+  echo -n " >>> Deseja limpar logs antigos do Apache? (y/n): "
+  read confirm
+  echo "============================"
+  if [[ "$confirm" == "y" || "$confirm" == "Y" ]]; then
+    sudo truncate -s 0 /var/log/apache2/error.log
+    sudo truncate -s 0 /var/log/apache2/access.log
+    echo " Logs do Apache limpos!"
+  else
+    echo "Operação cancelada."
+  fi
+  echo "============================"
+  echo
+  echo "Digite enter para voltar ao Menu"
+  read
+  MenuSistema
+}
+ConfigurarPhpIni(){
+  echo
+  vphp=$(php -v 2>/dev/null | head -1 | grep -oP '\d+\.\d+' | head -1)
+  phpini="/etc/php/$vphp/apache2/php.ini"
+  echo "============================"
+  echo "  Configurar php.ini — PHP $vphp  "
+  echo "  Arquivo: $phpini"
+  echo "============================"
+  echo
+  echo " Valores atuais:"
+  echo -n "  memory_limit:         "; grep "^memory_limit" $phpini 2>/dev/null | awk '{print $3}'
+  echo -n "  upload_max_filesize:  "; grep "^upload_max_filesize" $phpini 2>/dev/null | awk '{print $3}'
+  echo -n "  post_max_size:        "; grep "^post_max_size" $phpini 2>/dev/null | awk '{print $3}'
+  echo -n "  max_execution_time:   "; grep "^max_execution_time" $phpini 2>/dev/null | awk '{print $3}'
+  echo
+  echo "============================"
+  echo -n " >>> memory_limit (ex: 256M) [enter para manter]: "
+  read val_memory
+  echo -n " >>> upload_max_filesize (ex: 64M) [enter para manter]: "
+  read val_upload
+  echo -n " >>> post_max_size (ex: 64M) [enter para manter]: "
+  read val_post
+  echo -n " >>> max_execution_time (ex: 300) [enter para manter]: "
+  read val_exec
+  echo "============================"
+  echo
+  if [[ -n "$val_memory" ]]; then
+    sudo sed -i "s/^memory_limit.*/memory_limit = $val_memory/" $phpini
+    echo " memory_limit definido para $val_memory"
+  fi
+  if [[ -n "$val_upload" ]]; then
+    sudo sed -i "s/^upload_max_filesize.*/upload_max_filesize = $val_upload/" $phpini
+    echo " upload_max_filesize definido para $val_upload"
+  fi
+  if [[ -n "$val_post" ]]; then
+    sudo sed -i "s/^post_max_size.*/post_max_size = $val_post/" $phpini
+    echo " post_max_size definido para $val_post"
+  fi
+  if [[ -n "$val_exec" ]]; then
+    sudo sed -i "s/^max_execution_time.*/max_execution_time = $val_exec/" $phpini
+    echo " max_execution_time definido para $val_exec"
+  fi
+  echo
+  echo "Reiniciando Apache para aplicar as alterações!..."
+  sudo systemctl restart apache2
+  echo "Apache reiniciado com sucesso!"
+  echo "============================"
+  echo
+  echo "Digite enter para voltar ao Menu"
+  read
+  MenuPHP
+}
+
 InstalarLamp(){
   echo
   echo "Atualizando Repositórios do Linux!..."
@@ -205,15 +719,7 @@ InstalarLamp(){
   echo "============================"
   echo
   echo "Instalando Curl e Wget!..."
-  sudo apt install -y curl && apt install -y wget
-  echo "============================"
-  echo
-  echo "Instalando Postgres SQL!..."
-  sudo apt install -y postgresql postgresql-contrib
-  echo "============================"
-  echo
-  echo "Iniciando Serviços do Postgres SQL!..."
-  sudo systemctl start postgresql.service
+  sudo apt install -y curl && sudo apt install -y wget
   echo "============================"
   echo
   echo "Instalando o Certbot!..."
@@ -260,13 +766,6 @@ DesinstalarLamp(){
   sudo apt purge -y php*
   echo "============================"
   echo
-  echo "Desinstalando o Postgres SQL"
-  sudo apt --purge remove -y postgresql postgresql-*
-  dpkg -l | grep postgres
-  sudo rm -rf /var/lib/postgresql/
-  sudo rm -rf /var/log/postgresql/
-  sudo rm -rf /etc/postgresql/
-  sudo deluser postgres
   echo "============================"
   echo
   echo "Desinstalando o Certbot"
@@ -972,6 +1471,126 @@ ClonarRepositorioGit(){
     Menu
 }
 
+VerLogsErroApache(){
+  echo
+  echo "============================"
+  echo "   Últimas 50 linhas do Log de Erros do Apache   "
+  echo "============================"
+  sudo tail -n 50 /var/log/apache2/error.log
+  echo "============================"
+  echo
+  echo "Digite enter para voltar ao Menu"
+  read
+  MenuApache
+}
+VerLogsAcessoApache(){
+  echo
+  echo "============================"
+  echo "   Últimas 50 linhas do Log de Acesso do Apache   "
+  echo "============================"
+  sudo tail -n 50 /var/log/apache2/access.log
+  echo "============================"
+  echo
+  echo "Digite enter para voltar ao Menu"
+  read
+  MenuApache
+}
+VerLogsDominio(){
+  echo
+  hostss=$(cat /etc/hosts)
+  echo "$hostss"
+  echo "============================"
+  echo -n " >>> Digite o dominio: "
+  read dominio
+  echo "============================"
+  echo
+  echo "--- Log de Erros: $dominio ---"
+  if [ -f "/var/log/apache2/$dominio-error.log" ]; then
+    sudo tail -n 50 /var/log/apache2/$dominio-error.log
+  else
+    sudo tail -n 50 /var/log/apache2/error.log
+  fi
+  echo "============================"
+  echo
+  echo "Digite enter para voltar ao Menu"
+  read
+  MenuApache
+}
+BackupSite(){
+  echo
+  hostss=$(cat /etc/hosts)
+  echo "$hostss"
+  echo "============================"
+  echo -n " >>> Digite o dominio a ser salvo no backup: "
+  read dominio
+  echo "============================"
+  timestamp=$(date +"%Y%m%d_%H%M%S")
+  backupfile="/var/backups/${dominio}_${timestamp}.tar.gz"
+  echo
+  echo "Criando backup de /var/www/$dominio !..."
+  sudo mkdir -p /var/backups
+  sudo tar -czf $backupfile /var/www/$dominio 2>/dev/null
+  echo "============================"
+  echo
+  if [ -f "$backupfile" ]; then
+    tamanho=$(du -sh $backupfile | awk '{print $1}')
+    echo " Backup criado com sucesso!"
+    echo " Arquivo: $backupfile"
+    echo " Tamanho: $tamanho"
+  else
+    echo " Falha ao criar o backup!"
+  fi
+  echo "============================"
+  echo
+  echo "Digite enter para voltar ao Menu"
+  read
+  MenuApache
+}
+RestaurarBackupSite(){
+  echo
+  echo "============================"
+  echo "  Backups disponíveis em /var/backups  "
+  echo "============================"
+  ls /var/backups/*.tar.gz 2>/dev/null || echo "Nenhum backup encontrado."
+  echo "============================"
+  echo
+  echo -n " >>> Digite o caminho completo do arquivo de backup: "
+  read backupfile
+  echo "============================"
+  echo -n " >>> Digite o dominio de destino (será restaurado em /var/www/dominio): "
+  read dominio
+  echo "============================"
+  echo
+  echo "Restaurando backup para /var/www/$dominio !..."
+  sudo mkdir -p /var/www/$dominio
+  sudo tar -xzf $backupfile -C /var/www/$dominio --strip-components=3 2>/dev/null
+  sudo chown -R www-data:www-data /var/www/$dominio
+  echo "============================"
+  echo " Backup restaurado em /var/www/$dominio!"
+  echo "============================"
+  echo
+  echo "Digite enter para voltar ao Menu"
+  read
+  MenuApache
+}
+ListarBackups(){
+  echo
+  echo "============================"
+  echo "  Backups disponíveis em /var/backups  "
+  echo "============================"
+  if ls /var/backups/*.tar.gz 2>/dev/null; then
+    echo
+    du -sh /var/backups/*.tar.gz 2>/dev/null
+  else
+    echo "Nenhum backup encontrado."
+  fi
+  echo "============================"
+  echo
+  echo "Digite enter para voltar ao Menu"
+  read
+  MenuApache
+}
+
 Sair() {
    echo
    echo " Finalizando..."
@@ -1016,7 +1635,115 @@ MenuNode(){
     10) VersaoAtivaDoNodeNativo;;
     11) DesinstalarNode;;
     0) Menu;;
-    *) "Opcao Invalida!" ; echo ; MenuNode ;;
+    *) echo "Opcao Invalida!" ; echo ; MenuNode ;;
+  esac
+}
+
+MenuRedis(){
+  clear
+  echo "==============================================="
+  echo "||    REDIS DEVELOPMENT DOUGLAS S. SANTOS    ||"
+  echo "==============================================="
+  echo
+  echo "Escolha uma funcao ou 0 para sair"
+  echo " [1] Instalar Redis"
+  echo " [2] Desinstalar Redis"
+  echo " [3] Iniciar Redis"
+  echo " [4] Parar Redis"
+  echo " [5] Reiniciar Redis"
+  echo " [6] Status do Redis"
+  echo " [7] Informações do Redis"
+  echo " [8] Testar Conexão"
+  echo " [9] Limpar Cache"
+  echo " [0] Voltar ao Menu Principal"
+  echo
+  echo -n " >>> Digite a Opcao: "
+  read opcao
+  echo "==============================================="
+  case $opcao in
+    1) InstalarRedis;;
+    2) DesinstalarRedis;;
+    3) IniciarRedis;;
+    4) PararRedis;;
+    5) ReiniciarRedis;;
+    6) StatusRedis;;
+    7) InfoRedis;;
+    8) TestarRedis;;
+    9) LimparCacheRedis;;
+    0) Menu;;
+    *) echo "Opcao Invalida!" ; echo ; MenuRedis ;;
+  esac
+}
+
+MenuPostgres(){
+  clear
+  echo "==============================================="
+  echo "||  POSTGRES DEVELOPMENT DOUGLAS S. SANTOS  ||"
+  echo "==============================================="
+  echo
+  echo "Escolha uma funcao ou 0 para sair"
+  echo " [1]  Instalar PostgreSQL"
+  echo " [2]  Desinstalar PostgreSQL"
+  echo " [3]  Iniciar PostgreSQL"
+  echo " [4]  Parar PostgreSQL"
+  echo " [5]  Reiniciar PostgreSQL"
+  echo " [6]  Status do PostgreSQL"
+  echo " [7]  Criar Usuário"
+  echo " [8]  Deletar Usuário"
+  echo " [9]  Criar Banco de Dados"
+  echo " [10] Deletar Banco de Dados"
+  echo " [11] Listar Bancos de Dados"
+  echo " [12] Backup de Banco"
+  echo " [13] Restaurar Banco"
+  echo " [0]  Voltar ao Menu Principal"
+  echo
+  echo -n " >>> Digite a Opcao: "
+  read opcao
+  echo "==============================================="
+  case $opcao in
+    1) InstalarPostgres;;
+    2) DesinstalarPostgres;;
+    3) IniciarPostgres;;
+    4) PararPostgres;;
+    5) ReiniciarPostgres;;
+    6) StatusPostgres;;
+    7) CriarUsuarioPostgres;;
+    8) DeletarUsuarioPostgres;;
+    9) CriarBancoDadosPostgres;;
+    10) DeletarBancoPostgres;;
+    11) ListarBancosPostgres;;
+    12) BackupBancoPostgres;;
+    13) RestaurarBancoPostgres;;
+    0) Menu;;
+    *) echo "Opcao Invalida!" ; echo ; MenuPostgres ;;
+  esac
+}
+
+MenuSistema(){
+  clear
+  echo "==============================================="
+  echo "||    SISTEMA  — DOUGLAS S. SANTOS           ||"
+  echo "==============================================="
+  echo
+  echo "Escolha uma funcao ou 0 para sair"
+  echo " [1] Informações do Servidor"
+  echo " [2] Status dos Serviços (Apache / PostgreSQL / Redis)"
+  echo " [3] Atualizar Sistema"
+  echo " [4] Portas em Uso"
+  echo " [5] Limpar Logs do Apache"
+  echo " [0] Voltar ao Menu Principal"
+  echo
+  echo -n " >>> Digite a Opcao: "
+  read opcao
+  echo "==============================================="
+  case $opcao in
+    1) InformacoesServidor;;
+    2) VerServicosAtivos;;
+    3) AtualizarSistema;;
+    4) VerPortasEmUso;;
+    5) LimparLogsSistema;;
+    0) Menu;;
+    *) echo "Opcao Invalida!" ; echo ; MenuSistema ;;
   esac
 }
 
@@ -1033,6 +1760,7 @@ MenuPHP(){
   echo " [4] Habilitar outra versão do PHP"
   echo " [5] Desinstalar versões do PHP"
   echo " [6] Instalar Repositório/PPA do PHP"
+  echo " [7] Configurar php.ini (limites de upload/memória/tempo)"
   echo " [0] Sair "
   echo
   echo -n " >>> Digite a Opcao: "
@@ -1043,10 +1771,11 @@ MenuPHP(){
     2) InstalarVersaoPhp;;
     3) ListarVersoesInstaladasPHP;;
     4) UsarOutraVersaoPHP;;
-    5) ListarVersoesNodeInstaladas;;
+    5) DesinstalarPHP;;
     6) adicionarRepoPhp;;
+    7) ConfigurarPhpIni;;
     0) Menu;;
-    *) "Opcao Invalida!" ; echo ; MenuPHP ;;
+    *) echo "Opcao Invalida!" ; echo ; MenuPHP ;;
   esac
 }
 MenuApache(){
@@ -1056,19 +1785,25 @@ MenuApache(){
   echo "==============================================="
   echo
   echo "Escolha uma funcao ou 0 para sair"
-  echo " [1] Instalar o LAMP " 
-  echo " [2] Desinstalar o LAMP "
-  echo " [3] Adicionar Dominio Online ao vHost do Apache"
-  echo " [4] Adicionar Dominio Local ao vHost do Apache"
-  echo " [5] Remover Dominio do vHost do Apache"
-  echo " [6] Aplicar Permissões em Dominio Virtual do Apache"
-  echo " [7] Renovar SSL"
-  echo " [8] Verificar Status do Apache"
-  echo " [9] Redefinir Config do Apache"
+  echo " [1]  Instalar o LAMP"
+  echo " [2]  Desinstalar o LAMP"
+  echo " [3]  Adicionar Dominio Online ao vHost do Apache"
+  echo " [4]  Adicionar Dominio Local ao vHost do Apache"
+  echo " [5]  Remover Dominio do vHost do Apache"
+  echo " [6]  Aplicar Permissões em Dominio Virtual do Apache"
+  echo " [7]  Renovar SSL"
+  echo " [8]  Verificar Status do Apache"
+  echo " [9]  Redefinir Config do Apache"
   echo " [10] Clonar Site"
   echo " [11] Limpar Site"
   echo " [12] Lista de Dominios Ativos"
-  echo " [0] Sair "
+  echo " [13] Backup de Site"
+  echo " [14] Restaurar Backup de Site"
+  echo " [15] Listar Backups"
+  echo " [16] Ver Log de Erros do Apache"
+  echo " [17] Ver Log de Acesso do Apache"
+  echo " [18] Ver Logs de um Dominio"
+  echo " [0]  Sair"
   echo
   echo -n " >>> Digite a Opcao: "
   read opcao
@@ -1086,8 +1821,14 @@ MenuApache(){
     10) ClonarSite;;
     11) LimparSite;;
     12) ListarDominios;;
+    13) BackupSite;;
+    14) RestaurarBackupSite;;
+    15) ListarBackups;;
+    16) VerLogsErroApache;;
+    17) VerLogsAcessoApache;;
+    18) VerLogsDominio;;
     0) Menu;;
-    *) "Opcao Invalida!" ; echo ; MenuApache ;;
+    *) echo "Opcao Invalida!" ; echo ; MenuApache ;;
   esac
 }
 Menu(){
@@ -1097,13 +1838,15 @@ Menu(){
   echo "==============================================="
   echo
   echo "Escolha uma funcao ou 0 para sair"
-  echo " [1] APACHE "
-  echo " [2] PHP "
+  echo " [1] APACHE / LAMP"
+  echo " [2] PHP"
   echo " [3] NODE"
-  echo " [4] Instalar Composer"
-  echo " [5] Clonar Repositório Git"
-
-  echo " [0] Sair "
+  echo " [4] POSTGRESQL"
+  echo " [5] REDIS"
+  echo " [6] SISTEMA"
+  echo " [7] Instalar Composer"
+  echo " [8] Clonar Repositório Git"
+  echo " [0] Sair"
   echo
   echo -n " >>> Digite a Opcao: "
   read opcao
@@ -1112,10 +1855,13 @@ Menu(){
     1) MenuApache;;
     2) MenuPHP;;
     3) MenuNode;;
-    4) InstalarComposer;;
-    5) ClonarRepositorioGit;;
+    4) MenuPostgres;;
+    5) MenuRedis;;
+    6) MenuSistema;;
+    7) InstalarComposer;;
+    8) ClonarRepositorioGit;;
     0) Sair;;
-    *) "Opcao Invalida!" ; echo ; Menu ;;
+    *) echo "Opcao Invalida!" ; echo ; Menu ;;
   esac
 }
 Menu
