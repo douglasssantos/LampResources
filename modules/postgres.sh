@@ -80,7 +80,7 @@ CriarUsuarioPostgres(){
   read pguser
   sep
   printf "  ${CIANO}▶  ${AMARELO_CLARO}%s${RESET} " "Senha do usuário:"
-  read -s pgpass
+  read pgpass
   echo
   sep
   info "Criando usuário $pguser..."

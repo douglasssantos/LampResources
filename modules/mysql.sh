@@ -128,7 +128,7 @@ CriarUsuarioMySQL(){
   read myuser
   sep
   printf "  ${CIANO}▶  ${AMARELO_CLARO}%s${RESET} " "Senha do usuário:"
-  read -s mypass
+  read mypass
   echo
   sep
   entrada "Host do usuário (ex: localhost ou % para qualquer host):"
