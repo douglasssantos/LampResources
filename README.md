@@ -129,9 +129,25 @@ sudo ./install
 
 ```
 LampResources/
-├── lamp       # Script principal
-└── install    # Instalador / Atualizador / Desinstalador
+├── lamp                  # Script principal (carrega os módulos)
+├── install               # Instalador / Atualizador / Desinstalador
+└── modules/              # Módulos funcionais
+    ├── _helpers.sh       # Cores, helpers visuais e funções utilitárias
+    ├── apache.sh         # Apache, LAMP, domínios, SSL, logs, backup de sites
+    ├── php.sh            # PHP (versões, módulos, php.ini, Composer)
+    ├── node.sh           # Node.js (NVM, versões, npm) e Git clone
+    ├── postgres.sh       # PostgreSQL (serviço, usuários, bancos, backup)
+    ├── mysql.sh          # MySQL (serviço, usuários, bancos, backup)
+    ├── redis.sh          # Redis (serviço, cache, testes)
+    └── sistema.sh        # Informações do servidor, serviços, atualizações
 ```
+
+### Caminhos de instalação
+
+| Arquivo | Destino |
+|---|---|
+| `lamp` | `/usr/local/bin/lamp` |
+| `modules/*.sh` | `/usr/local/lib/lamp/modules/` |
 
 ---
 

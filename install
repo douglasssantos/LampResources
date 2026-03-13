@@ -4,14 +4,26 @@
 # E-mail: douglassantos2127@gmail.com
 # whatsapp: +55 21 97553-3534
 
+INSTALL_VERSION="2.0"
 INSTALL_SRC="./lamp"
 INSTALL_DST="/usr/local/bin/lamp"
-INSTALL_VERSION="2.0"
+MODULES_SRC="./modules"
+MODULES_DST="/usr/local/lib/lamp/modules"
 
-# ─── Cores ────────────────────────────────────────────────────────────────────
+MODULES_LIST=(
+  _helpers
+  php
+  redis
+  postgres
+  mysql
+  sistema
+  apache
+  node
+)
+
+# ─── Cores (inline — independente do lamp) ───────────────────────────────────
 RESET=$'\e[0m'
 NEGRITO=$'\e[1m'
-PRETO=$'\e[40m'
 VERMELHO=$'\e[31m'
 VERDE_CLARO=$'\e[92m'
 AMARELO=$'\e[33m'
@@ -42,27 +54,50 @@ cabecalho(){
   echo
 }
 
+opcao_menu(){ printf "  ${CIANO}[${AMARELO_CLARO}%s${CIANO}]${RESET}  %s\n" "$1" "$2"; }
+
 # ─── Cabeçalho ────────────────────────────────────────────────────────────────
 cabecalho
 
-# ─── Verificar arquivo fonte ──────────────────────────────────────────────────
-if [[ ! -f "$INSTALL_SRC" ]]; then
-  erro "Arquivo '$INSTALL_SRC' não encontrado. Execute o instalador na pasta correta."
-fi
-
-# ─── Verificar sudo ───────────────────────────────────────────────────────────
+# ─── Verificar permissão sudo ─────────────────────────────────────────────────
 if [[ $EUID -ne 0 ]] && ! sudo -n true 2>/dev/null; then
   erro "Execute com sudo: sudo ./install"
 fi
 
+# ─── Verificar arquivo principal ──────────────────────────────────────────────
+if [[ ! -f "$INSTALL_SRC" ]]; then
+  erro "Arquivo '$INSTALL_SRC' não encontrado. Execute o instalador na pasta do repositório."
+fi
+
+# ─── Verificar módulos ────────────────────────────────────────────────────────
+info "Verificando módulos..."
+modulos_ok=true
+for mod in "${MODULES_LIST[@]}"; do
+  if [[ -f "$MODULES_SRC/${mod}.sh" ]]; then
+    ok "  modules/${mod}.sh"
+  else
+    aviso "  AUSENTE: modules/${mod}.sh"
+    modulos_ok=false
+  fi
+done
+
+if ! $modulos_ok; then
+  echo
+  aviso "Um ou mais módulos estão ausentes. A instalação pode ser incompleta."
+  entrada "Continuar mesmo assim? (y/n):"
+  read continuar
+  [[ "$continuar" != "y" && "$continuar" != "Y" ]] && echo && exit 0
+fi
+
 # ─── Detectar instalação existente ───────────────────────────────────────────
+sep
 MODO="instalar"
 if [[ -f "$INSTALL_DST" ]]; then
   aviso "Lamp já está instalado em $INSTALL_DST"
   echo
-  echo "  ${CIANO}[${AMARELO_CLARO}1${CIANO}]${RESET}  Atualizar"
-  echo "  ${CIANO}[${AMARELO_CLARO}2${CIANO}]${RESET}  Desinstalar"
-  echo "  ${CIANO}[${AMARELO_CLARO}3${CIANO}]${RESET}  Cancelar"
+  opcao_menu 1 "Atualizar"
+  opcao_menu 2 "Desinstalar"
+  opcao_menu 3 "Cancelar"
   echo
   entrada "Escolha uma opção:"
   read opcao
@@ -75,10 +110,13 @@ if [[ -f "$INSTALL_DST" ]]; then
   esac
 fi
 
-# ─── Desinstalar ─────────────────────────────────────────────────────────────
+# ─── Desinstalar ──────────────────────────────────────────────────────────────
 if [[ "$MODO" == "desinstalar" ]]; then
   info "Removendo $INSTALL_DST..."
   sudo rm -f "$INSTALL_DST"
+  info "Removendo módulos em $MODULES_DST..."
+  sudo rm -rf "$MODULES_DST"
+  sudo rmdir /usr/local/lib/lamp 2>/dev/null || true
   if [[ ! -f "$INSTALL_DST" ]]; then
     ok "Lamp desinstalado com sucesso!"
   else
@@ -89,14 +127,12 @@ if [[ "$MODO" == "desinstalar" ]]; then
   exit 0
 fi
 
-# ─── Instalar / Atualizar ─────────────────────────────────────────────────────
-echo "  ${NEGRITO}${BRANCO}O seguinte será executado:${RESET}"
+# ─── Resumo ───────────────────────────────────────────────────────────────────
+echo "  ${NEGRITO}${BRANCO}O seguinte será instalado:${RESET}"
 echo
-item "Aplicar permissão de execução ao script"
-item "Copiar lamp → $INSTALL_DST"
-item "Verificar instalação"
+item "Script principal  →  $INSTALL_DST"
+item "Módulos (${#MODULES_LIST[@]} arquivos)  →  $MODULES_DST/"
 echo
-
 if [[ "$MODO" == "atualizar" ]]; then
   entrada "Confirmar atualização? (y/n):"
 else
@@ -104,65 +140,94 @@ else
 fi
 read confirmar
 echo
-
-if [[ "$confirmar" != "y" && "$confirmar" != "Y" ]]; then
-  aviso "Operação cancelada."
-  echo
-  exit 0
-fi
-
-sep
-local_erros=0
-
-# Passo 1 — Permissão
-info "[1/2]  Aplicando permissão de execução..."
-if sudo chmod +x "$INSTALL_SRC"; then
-  ok "Permissão aplicada!"
-else
-  aviso "Não foi possível aplicar chmod — continuando mesmo assim."
-  local_erros=$((local_erros+1))
-fi
+[[ "$confirmar" != "y" && "$confirmar" != "Y" ]] && aviso "Operação cancelada." && echo && exit 0
 
 sep
 
-# Passo 2 — Copiar
-if [[ "$MODO" == "atualizar" ]]; then
-  info "[2/2]  Atualizando $INSTALL_DST..."
+TOTAL=4
+erros=0
+
+# ── Passo 1 — Criar diretórios ────────────────────────────────────────────────
+echo
+echo "  ${CINZA}[${AMARELO_CLARO}1${CINZA}/${AMARELO_CLARO}${TOTAL}${CINZA}]${RESET}  ${NEGRITO}${BRANCO}Criar diretórios${RESET}"
+sep
+if sudo mkdir -p "$MODULES_DST"; then
+  ok "Diretório criado: $MODULES_DST"
 else
-  info "[2/2]  Instalando em $INSTALL_DST..."
+  aviso "Não foi possível criar $MODULES_DST"
+  erros=$((erros+1))
 fi
 
+# ── Passo 2 — Instalar módulos ────────────────────────────────────────────────
+echo
+echo "  ${CINZA}[${AMARELO_CLARO}2${CINZA}/${AMARELO_CLARO}${TOTAL}${CINZA}]${RESET}  ${NEGRITO}${BRANCO}Instalar módulos${RESET}"
+sep
+for mod in "${MODULES_LIST[@]}"; do
+  src="$MODULES_SRC/${mod}.sh"
+  dst="$MODULES_DST/${mod}.sh"
+  if [[ -f "$src" ]]; then
+    if sudo cp -f "$src" "$dst" && sudo chmod 644 "$dst"; then
+      ok "  ${mod}.sh"
+    else
+      aviso "  Falha ao copiar ${mod}.sh"
+      erros=$((erros+1))
+    fi
+  else
+    aviso "  Ignorado (ausente): ${mod}.sh"
+  fi
+done
+
+# ── Passo 3 — Instalar script principal ───────────────────────────────────────
+echo
+echo "  ${CINZA}[${AMARELO_CLARO}3${CINZA}/${AMARELO_CLARO}${TOTAL}${CINZA}]${RESET}  ${NEGRITO}${BRANCO}Instalar script principal${RESET}"
+sep
 if sudo cp -f "$INSTALL_SRC" "$INSTALL_DST" && sudo chmod +x "$INSTALL_DST"; then
-  ok "Arquivo copiado!"
+  ok "lamp instalado em $INSTALL_DST"
 else
-  erro "Falha ao copiar para $INSTALL_DST — verifique as permissões."
+  erro "Falha ao copiar lamp para $INSTALL_DST"
 fi
 
-# ─── Verificação final ────────────────────────────────────────────────────────
-linha
+# ── Passo 4 — Verificação final ────────────────────────────────────────────────
+echo
+echo "  ${CINZA}[${AMARELO_CLARO}4${CINZA}/${AMARELO_CLARO}${TOTAL}${CINZA}]${RESET}  ${NEGRITO}${BRANCO}Verificação final${RESET}"
+sep
+
+total_mods=0
+for mod in "${MODULES_LIST[@]}"; do
+  if [[ -f "$MODULES_DST/${mod}.sh" ]]; then
+    total_mods=$((total_mods+1))
+  fi
+done
 
 if [[ -x "$INSTALL_DST" ]]; then
-  if [[ "$MODO" == "atualizar" ]]; then
-    ok "Lamp atualizado com sucesso!"
-  else
-    ok "Lamp instalado com sucesso!"
-  fi
-  echo
-  item "Destino:  $INSTALL_DST"
-  item "Versão:   $INSTALL_VERSION"
-  echo
-  echo "  ${CINZA}Para usar:${RESET}  ${NEGRITO}${CIANO_CLARO}sudo lamp${RESET}"
-  echo
-else
-  erro "Instalação falhou — $INSTALL_DST não foi encontrado ou não é executável."
+  ok "Script principal: $INSTALL_DST  ✔"
 fi
+ok "Módulos instalados: $total_mods / ${#MODULES_LIST[@]}"
 
+# ─── Sumário ──────────────────────────────────────────────────────────────────
+linha
+echo
+if [[ $erros -eq 0 ]]; then
+  if [[ "$MODO" == "atualizar" ]]; then
+    echo "  ${NEGRITO}${VERDE_CLARO}✔  Lamp atualizado com sucesso!${RESET}"
+  else
+    echo "  ${NEGRITO}${VERDE_CLARO}✔  Lamp instalado com sucesso!${RESET}"
+  fi
+else
+  aviso "Instalação concluída com $erros erro(s)."
+fi
+echo
+item "Binário:   $INSTALL_DST"
+item "Módulos:   $MODULES_DST/"
+item "Versão:    $INSTALL_VERSION"
+echo
+echo "  ${CINZA}Para usar:${RESET}  ${NEGRITO}${CIANO_CLARO}sudo lamp${RESET}"
+echo
 linha
 echo
 entrada "Deseja executar o Lamp agora? (y/n):"
 read executar
 echo
-
 if [[ "$executar" == "y" || "$executar" == "Y" ]]; then
   echo
   sudo lamp
