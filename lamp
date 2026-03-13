@@ -54,6 +54,29 @@ pausar() {
   read
 }
 
+passo(){
+  local num="$1"
+  local total="$2"
+  local desc="$3"
+  echo
+  echo "  ${CINZA}[${AMARELO_CLARO}${num}${CINZA}/${AMARELO_CLARO}${total}${CINZA}]${RESET}  ${NEGRITO}${BRANCO}${desc}${RESET}"
+  sep
+}
+
+ja_instalado(){
+  dpkg -l "$1" 2>/dev/null | grep -q "^ii"
+}
+
+verificar_internet(){
+  ping -c 1 -W 3 8.8.8.8 &>/dev/null
+}
+
+verificar_espaco(){
+  local livre_mb
+  livre_mb=$(df / | awk 'NR==2 {printf "%d", $4/1024}')
+  [[ $livre_mb -ge 500 ]]
+}
+
 cabecalho(){
   local titulo="$1"
   local subtitulo="$2"
@@ -91,85 +114,113 @@ adicionarRepoPhp(){
 
 InstalarVersaoPhp(){
   titulo "Instalar Versão Específica do PHP"
-  entrada "Digite a versão do PHP desejada (Ex: 8.1):"
+  entrada "Versão do PHP desejada (Ex: 8.3):"
   read vPHP
-  sep
-  info "Atualizando repositórios..."
+  echo
+
+  if [[ -z "$vPHP" ]]; then
+    erro "Versão não informada."
+    pausar; MenuPHP; return
+  fi
+
+  local TOTAL=4
+  local inicio=$SECONDS
+
+  passo 1 $TOTAL "Atualizar repositórios"
   sudo apt update
-  sep
-  info "Instalando PHP $vPHP..."
+  ok "Repositórios atualizados!"
+
+  passo 2 $TOTAL "Instalar PHP $vPHP"
+  if ja_instalado "php$vPHP"; then
+    aviso "PHP $vPHP já está instalado — reinstalando módulos."
+  fi
   sudo apt install -y php$vPHP
-  sep
-  info "Instalando módulos do PHP $vPHP..."
-  sudo apt install -y php$vPHP-pgsql
-  sudo apt install -y php$vPHP-ssh2 php$vPHP-common php$vPHP-cli php$vPHP-cgi php$vPHP-curl php$vPHP-gd
-  sudo apt install -y php$vPHP-mbstring php$vPHP-intl php$vPHP-imap php$vPHP-sqlite3 php$vPHP-tidy php$vPHP-xmlrpc
-  sudo apt install -y php$vPHP-xsl php$vPHP-opcache php$vPHP-zip
-  sudo phpenmod pdo_pgsql
-  sep
+  ok "PHP $vPHP instalado!"
+
+  passo 3 $TOTAL "Instalar módulos do PHP $vPHP"
+  sudo apt install -y \
+    php${vPHP}-common php${vPHP}-cli php${vPHP}-cgi \
+    php${vPHP}-curl php${vPHP}-gd php${vPHP}-mbstring \
+    php${vPHP}-intl php${vPHP}-imap php${vPHP}-sqlite3 \
+    php${vPHP}-tidy php${vPHP}-xmlrpc php${vPHP}-xsl \
+    php${vPHP}-opcache php${vPHP}-zip php${vPHP}-pgsql 2>/dev/null
+  sudo phpenmod pdo_pgsql 2>/dev/null || true
+  ok "Módulos instalados!"
+
+  passo 4 $TOTAL "Finalizar"
   info "Limpando resíduos..."
-  sudo apt autoclean -y && apt --purge autoremove -y
-  sep
+  sudo apt autoclean -y && sudo apt --purge autoremove -y
   info "Reiniciando Apache..."
   sudo systemctl restart apache2
-  ok "Apache reiniciado!"
-  ok "PHP $vPHP instalado com sucesso!"
+
+  local duracao=$((SECONDS - inicio))
+  linha
+  ok "PHP $vPHP instalado com sucesso em ${duracao}s!"
+  item "Versão: $(php -v 2>/dev/null | head -1)"
   linha
   pausar
   MenuPHP
 }
 InstalarVersaoPhpLamp(){
-  titulo "Instalar PHP para o LAMP"
-  entrada "Digite a versão do PHP desejada (Ex: 8.1):"
+  passo 6 7 "Instalar PHP"
+  entrada "Versão do PHP (Ex: 8.3 — deixe vazio para a mais recente):"
   read vPHP
-  sep
-  info "Atualizando repositórios..."
-  sudo apt update
-  sep
-  info "Instalando PHP $vPHP..."
-  sudo apt install -y php$vPHP
+  echo
+  if [[ -z "$vPHP" ]]; then
+    info "Instalando versão mais recente do PHP..."
+    sudo apt install -y php
+    vPHP=$(php -v 2>/dev/null | grep -oP '^\S+\s+\K\d+\.\d+' | head -1)
+  else
+    info "Instalando PHP $vPHP..."
+    sudo apt install -y php$vPHP
+  fi
   sep
   info "Instalando módulos do PHP $vPHP..."
-  sudo apt install -y php$vPHP-pgsql
-  sudo apt install -y php$vPHP-ssh2 php$vPHP-common php$vPHP-cli php$vPHP-cgi php$vPHP-curl php$vPHP-gd
-  sudo apt install -y php$vPHP-mbstring php$vPHP-intl php$vPHP-imap php$vPHP-sqlite3 php$vPHP-tidy php$vPHP-xmlrpc
-  sudo apt install -y php$vPHP-xsl php$vPHP-opcache php$vPHP-zip
-  sudo phpenmod pdo_pgsql
-  sep
-  info "Limpando resíduos..."
-  sudo apt autoclean -y && apt --purge autoremove -y
-  sep
-  info "Reiniciando Apache..."
-  sudo systemctl restart apache2
-  ok "Apache reiniciado!"
-  ok "PHP $vPHP instalado com sucesso!"
-  linha
-  pausar
-  MenuApache
+  sudo apt install -y \
+    php${vPHP}-common php${vPHP}-cli php${vPHP}-cgi \
+    php${vPHP}-curl php${vPHP}-gd php${vPHP}-mbstring \
+    php${vPHP}-intl php${vPHP}-imap php${vPHP}-sqlite3 \
+    php${vPHP}-tidy php${vPHP}-xmlrpc php${vPHP}-xsl \
+    php${vPHP}-opcache php${vPHP}-zip php${vPHP}-pgsql 2>/dev/null
+  sudo phpenmod pdo_pgsql 2>/dev/null || true
+  ok "PHP $vPHP e módulos instalados!"
 }
 
 InstalarUltimaVersaoPhp(){
   titulo "Instalar Versão Atual do PHP"
-  info "Atualizando repositórios..."
+  local TOTAL=4
+  local inicio=$SECONDS
+
+  passo 1 $TOTAL "Atualizar repositórios"
   sudo apt update
-  sep
-  info "Instalando PHP (versão atual)..."
+  ok "Repositórios atualizados!"
+
+  passo 2 $TOTAL "Instalar PHP (versão atual)"
   sudo apt install -y php
-  sep
-  info "Instalando módulos necessários..."
-  sudo apt install -y php-pgsql
-  sudo apt install -y php-ssh2 php-common php-cli php-cgi php-curl php-gd
-  sudo apt install -y php-mbstring php-intl php-imap php-sqlite3 php-tidy php-xmlrpc
-  sudo apt install -y php-xsl php-opcache php-zip
-  sudo phpenmod pdo_pgsql
-  sep
+  local vPHP
+  vPHP=$(php -v 2>/dev/null | grep -oP '^\S+\s+\K\d+\.\d+' | head -1)
+  ok "PHP $vPHP instalado!"
+
+  passo 3 $TOTAL "Instalar módulos do PHP"
+  sudo apt install -y \
+    php-common php-cli php-cgi \
+    php-curl php-gd php-mbstring \
+    php-intl php-imap php-sqlite3 \
+    php-tidy php-xmlrpc php-xsl \
+    php-opcache php-zip php-pgsql 2>/dev/null
+  sudo phpenmod pdo_pgsql 2>/dev/null || true
+  ok "Módulos instalados!"
+
+  passo 4 $TOTAL "Finalizar"
   info "Limpando resíduos..."
-  sudo apt autoclean -y && apt --purge autoremove -y
-  sep
+  sudo apt autoclean -y && sudo apt --purge autoremove -y
   info "Reiniciando Apache..."
   sudo systemctl restart apache2
-  ok "Apache reiniciado!"
-  ok "PHP instalado com sucesso!"
+
+  local duracao=$((SECONDS - inicio))
+  linha
+  ok "PHP $vPHP instalado com sucesso em ${duracao}s!"
+  item "Versão: $(php -v 2>/dev/null | head -1)"
   linha
   pausar
   MenuPHP
@@ -416,48 +467,329 @@ ListarBancosPostgres(){
   pausar
   MenuPostgres
 }
+PG_BACKUP_DIR="/var/backups/postgres"
+
+_pg_garantir_dir(){
+  sudo mkdir -p "$PG_BACKUP_DIR"
+}
+
+_pg_listar_backups(){
+  if ls "$PG_BACKUP_DIR"/*.{sql,gz,dump} 2>/dev/null | head -1 &>/dev/null; then
+    echo
+    printf "  ${CINZA}%-50s %8s  %s${RESET}\n" "Arquivo" "Tamanho" "Data"
+    sep
+    for f in $(ls -t "$PG_BACKUP_DIR"/*.{sql,gz,dump} 2>/dev/null); do
+      local nome tamanho data
+      nome=$(basename "$f")
+      tamanho=$(du -sh "$f" 2>/dev/null | awk '{print $1}')
+      data=$(date -r "$f" "+%d/%m/%Y %H:%M" 2>/dev/null)
+      printf "  ${BRANCO}%-50s${RESET} ${AMARELO_CLARO}%8s${RESET}  ${CINZA}%s${RESET}\n" "$nome" "$tamanho" "$data"
+    done
+    echo
+  else
+    aviso "Nenhum backup encontrado em $PG_BACKUP_DIR"
+    return 1
+  fi
+}
+
 BackupBancoPostgres(){
   titulo "Backup de Banco PostgreSQL"
-  entrada "Nome do banco de dados:"
+
+  _pg_garantir_dir
+
+  info "Bancos disponíveis:"
+  sep
+  sudo -u postgres psql -c "\l" 2>/dev/null
+  sep
+
+  entrada "Nome do banco (ou ALL para todos):"
   read pgdb
+  echo
+
+  entrada "Formato — [1] SQL (padrão)  [2] Comprimido .gz  [3] Custom .dump:"
+  read fmt
+  echo
   sep
+
+  local timestamp
   timestamp=$(date +"%Y%m%d_%H%M%S")
-  backupfile="/var/backups/pg_${pgdb}_${timestamp}.sql"
-  sudo mkdir -p /var/backups
-  info "Criando backup do banco $pgdb..."
-  sudo -u postgres pg_dump $pgdb > $backupfile
+
+  entrada "Tipo — [1] Completo  [2] Somente estrutura  [3] Somente dados:"
+  read tipo
+  echo
+
+  local extra_flags=""
+  case "$tipo" in
+    2) extra_flags="--schema-only" ;;
+    3) extra_flags="--data-only" ;;
+    *) extra_flags="" ;;
+  esac
+
   sep
-  if [ -f "$backupfile" ]; then
-    tamanho=$(du -sh $backupfile | awk '{print $1}')
-    ok "Backup criado com sucesso!"
-    item "Arquivo: $backupfile"
-    item "Tamanho: $tamanho"
+
+  if [[ "$pgdb" == "ALL" || "$pgdb" == "all" ]]; then
+    # ── Backup de todos os bancos ──────────────────────────────────────────
+    local outfile="$PG_BACKUP_DIR/pg_all_${timestamp}.sql"
+    info "Criando backup de TODOS os bancos..."
+    if sudo -u postgres pg_dumpall $extra_flags > "$outfile" 2>/dev/null; then
+      local tamanho
+      tamanho=$(du -sh "$outfile" | awk '{print $1}')
+      ok "Backup completo criado!"
+      item "Arquivo: $outfile"
+      item "Tamanho: $tamanho"
+    else
+      erro "Falha ao criar o backup!"
+      linha; pausar; MenuBackupPostgres; return
+    fi
   else
-    erro "Falha ao criar o backup!"
+    # ── Backup de um banco específico ─────────────────────────────────────
+    local outfile ext
+    case "$fmt" in
+      2)
+        ext="sql.gz"
+        outfile="$PG_BACKUP_DIR/pg_${pgdb}_${timestamp}.${ext}"
+        info "Criando backup comprimido de $pgdb..."
+        sudo -u postgres pg_dump $extra_flags "$pgdb" 2>/dev/null | gzip > "$outfile"
+        ;;
+      3)
+        ext="dump"
+        outfile="$PG_BACKUP_DIR/pg_${pgdb}_${timestamp}.${ext}"
+        info "Criando backup custom de $pgdb..."
+        sudo -u postgres pg_dump -Fc $extra_flags "$pgdb" -f "$outfile" 2>/dev/null
+        ;;
+      *)
+        ext="sql"
+        outfile="$PG_BACKUP_DIR/pg_${pgdb}_${timestamp}.${ext}"
+        info "Criando backup SQL de $pgdb..."
+        sudo -u postgres pg_dump $extra_flags "$pgdb" > "$outfile" 2>/dev/null
+        ;;
+    esac
+
+    if [[ -s "$outfile" ]]; then
+      local tamanho
+      tamanho=$(du -sh "$outfile" | awk '{print $1}')
+      ok "Backup criado com sucesso!"
+      item "Banco:   $pgdb"
+      item "Arquivo: $outfile"
+      item "Tamanho: $tamanho"
+      item "Tipo:    ${extra_flags:-completo}"
+    else
+      sudo rm -f "$outfile" 2>/dev/null
+      erro "Falha ao criar o backup! Verifique se o banco '$pgdb' existe."
+    fi
   fi
+
   linha
   pausar
-  MenuPostgres
+  MenuBackupPostgres
 }
+
 RestaurarBancoPostgres(){
   titulo "Restaurar Banco PostgreSQL"
-  info "Backups disponíveis em /var/backups:"
+
+  if ! _pg_listar_backups; then
+    pausar; MenuBackupPostgres; return
+  fi
+
+  entrada "Nome do arquivo (apenas o nome, sem o caminho):"
+  read nome_arquivo
+  local backupfile="$PG_BACKUP_DIR/$nome_arquivo"
+
+  if [[ ! -f "$backupfile" ]]; then
+    erro "Arquivo não encontrado: $backupfile"
+    pausar; MenuBackupPostgres; return
+  fi
   sep
-  ls /var/backups/pg_*.sql 2>/dev/null || aviso "Nenhum backup de banco encontrado."
-  sep
-  entrada "Caminho completo do arquivo .sql:"
-  read backupfile
-  sep
+
   entrada "Nome do banco de destino:"
   read pgdb
   sep
-  info "Restaurando banco $pgdb..."
-  sudo -u postgres psql -c "CREATE DATABASE $pgdb;" 2>/dev/null || true
-  sudo -u postgres psql $pgdb < $backupfile
-  ok "Banco $pgdb restaurado com sucesso!"
+
+  local banco_existe
+  banco_existe=$(sudo -u postgres psql -tAc "SELECT 1 FROM pg_database WHERE datname='$pgdb'" 2>/dev/null)
+
+  if [[ "$banco_existe" == "1" ]]; then
+    aviso "O banco '$pgdb' já existe!"
+    entrada "Sobrescrever? (drop e recreate) (y/n):"
+    read sobreescrever
+    if [[ "$sobreescrever" == "y" || "$sobreescrever" == "Y" ]]; then
+      info "Removendo banco existente $pgdb..."
+      sudo -u postgres psql -c "DROP DATABASE $pgdb;" 2>/dev/null
+    else
+      aviso "Restauração cancelada."
+      pausar; MenuBackupPostgres; return
+    fi
+  fi
+
+  info "Criando banco $pgdb..."
+  sudo -u postgres psql -c "CREATE DATABASE $pgdb;" 2>/dev/null
+
+  sep
+  info "Restaurando $nome_arquivo → $pgdb..."
+
+  local ext="${backupfile##*.}"
+  local sucesso=false
+
+  case "$ext" in
+    gz)
+      zcat "$backupfile" | sudo -u postgres psql "$pgdb" &>/dev/null && sucesso=true
+      ;;
+    dump)
+      sudo -u postgres pg_restore -d "$pgdb" "$backupfile" &>/dev/null && sucesso=true
+      ;;
+    sql)
+      sudo -u postgres psql "$pgdb" < "$backupfile" &>/dev/null && sucesso=true
+      ;;
+  esac
+
+  if $sucesso; then
+    ok "Banco '$pgdb' restaurado com sucesso!"
+  else
+    erro "Ocorreu um erro durante a restauração."
+    aviso "Tente verificar os logs do PostgreSQL para mais detalhes."
+  fi
+
   linha
   pausar
-  MenuPostgres
+  MenuBackupPostgres
+}
+
+ListarBackupsPostgres(){
+  titulo "Backups Disponíveis"
+  _pg_listar_backups || true
+  sep
+  if ls "$PG_BACKUP_DIR"/*.{sql,gz,dump} 2>/dev/null | head -1 &>/dev/null; then
+    local total
+    total=$(du -sh "$PG_BACKUP_DIR" 2>/dev/null | awk '{print $1}')
+    item "Diretório:    $PG_BACKUP_DIR"
+    item "Espaço total: $total"
+  fi
+  linha
+  pausar
+  MenuBackupPostgres
+}
+
+AgendarBackupPostgres(){
+  titulo "Agendar Backup Automático"
+
+  info "O backup será feito via cron e salvo em $PG_BACKUP_DIR"
+  echo
+
+  entrada "Nome do banco (ou ALL para todos):"
+  read pgdb
+  sep
+
+  echo "  ${BRANCO}Frequência:${RESET}"
+  opcao_menu 1 "Diário (03:00)"
+  opcao_menu 2 "Semanal (domingo às 03:00)"
+  opcao_menu 3 "A cada 6 horas"
+  opcao_menu 4 "Personalizado"
+  echo
+  entrada "Escolha:"
+  read freq
+  echo
+
+  local cron_expr banco_cmd outfile_expr
+  outfile_expr="$PG_BACKUP_DIR/pg_${pgdb}_\$(date +%Y%m%d_%H%M%S).sql"
+
+  case "$pgdb" in
+    ALL|all) banco_cmd="sudo -u postgres pg_dumpall > $outfile_expr" ;;
+    *)       banco_cmd="sudo -u postgres pg_dump $pgdb > $outfile_expr" ;;
+  esac
+
+  case "$freq" in
+    1) cron_expr="0 3 * * *" ;;
+    2) cron_expr="0 3 * * 0" ;;
+    3) cron_expr="0 */6 * * *" ;;
+    4)
+      entrada "Digite a expressão cron (ex: 0 4 * * 1):"
+      read cron_expr
+      ;;
+    *) cron_expr="0 3 * * *" ;;
+  esac
+
+  sep
+  local cron_line="$cron_expr $banco_cmd"
+  info "Adicionando ao crontab do root..."
+  ( sudo crontab -l 2>/dev/null | grep -v "pg_backup_${pgdb}"; echo "# pg_backup_${pgdb}"; echo "$cron_line" ) | sudo crontab -
+  ok "Backup agendado com sucesso!"
+  item "Banco:     $pgdb"
+  item "Expressão: $cron_expr"
+  item "Destino:   $PG_BACKUP_DIR"
+  linha
+  pausar
+  MenuBackupPostgres
+}
+
+LimparBackupsAntigos(){
+  titulo "Limpar Backups Antigos"
+
+  if ! _pg_listar_backups; then
+    pausar; MenuBackupPostgres; return
+  fi
+
+  entrada "Remover backups com mais de quantos dias? (ex: 30):"
+  read dias
+  sep
+
+  if ! [[ "$dias" =~ ^[0-9]+$ ]]; then
+    erro "Valor inválido. Digite apenas números."
+    pausar; MenuBackupPostgres; return
+  fi
+
+  local count
+  count=$(sudo find "$PG_BACKUP_DIR" -name "pg_*.{sql,gz,dump}" -mtime +$dias 2>/dev/null | wc -l)
+
+  if [[ "$count" -eq 0 ]]; then
+    aviso "Nenhum backup com mais de $dias dias encontrado."
+    pausar; MenuBackupPostgres; return
+  fi
+
+  aviso "$count arquivo(s) com mais de $dias dias serão deletados:"
+  sudo find "$PG_BACKUP_DIR" -name "pg_*" -mtime +$dias 2>/dev/null | while read f; do
+    item "$(basename $f)"
+  done
+  echo
+  entrada "Confirmar exclusão? (y/n):"
+  read confirm
+  sep
+
+  if [[ "$confirm" == "y" || "$confirm" == "Y" ]]; then
+    sudo find "$PG_BACKUP_DIR" -name "pg_*" -mtime +$dias -delete 2>/dev/null
+    ok "$count backup(s) removido(s)!"
+  else
+    aviso "Operação cancelada."
+  fi
+  linha
+  pausar
+  MenuBackupPostgres
+}
+
+VerAgendamentosBackup(){
+  titulo "Agendamentos de Backup (crontab)"
+  sep
+  sudo crontab -l 2>/dev/null | grep "pg_backup\|pg_dump\|pg_dumpall" || aviso "Nenhum agendamento de backup encontrado."
+  linha
+  pausar
+  MenuBackupPostgres
+}
+
+RemoverAgendamentoBackup(){
+  titulo "Remover Agendamento de Backup"
+  sep
+  sudo crontab -l 2>/dev/null | grep -n "pg_backup\|pg_dump\|pg_dumpall" || {
+    aviso "Nenhum agendamento encontrado."
+    pausar; MenuBackupPostgres; return
+  }
+  sep
+  entrada "Nome do banco do agendamento a remover:"
+  read pgdb
+  sep
+  ( sudo crontab -l 2>/dev/null | grep -v "pg_backup_${pgdb}" | grep -v "pg_dump.*${pgdb}" ) | sudo crontab -
+  ok "Agendamento para '$pgdb' removido!"
+  linha
+  pausar
+  MenuBackupPostgres
 }
 DeletarUsuarioPostgres(){
   titulo "Deletar Usuário PostgreSQL"
@@ -624,12 +956,74 @@ ConfigurarPhpIni(){
 }
 
 InstalarLamp(){
-  titulo "Instalação do LAMP"
-  info "Atualizando repositórios..."
+  cabecalho "INSTALAÇÃO DO LAMP" "Apache + PHP + Ferramentas"
+
+  # ── Pré-verificações ──────────────────────────────────────────────────────
+  info "Verificando pré-requisitos..."
+  echo
+
+  local erros=0
+
+  if [[ $EUID -ne 0 ]] && ! sudo -n true 2>/dev/null; then
+    erro "Sem permissão sudo. Execute o script com um usuário que tenha sudo."
+    erros=$((erros+1))
+  else
+    ok "Permissão sudo disponível"
+  fi
+
+  if verificar_internet; then
+    ok "Conexão com a internet OK"
+  else
+    erro "Sem acesso à internet. Verifique sua conexão."
+    erros=$((erros+1))
+  fi
+
+  if verificar_espaco; then
+    livre=$(df / | awk 'NR==2 {printf "%dMB", $4/1024}')
+    ok "Espaço em disco disponível ($livre livres)"
+  else
+    erro "Espaço insuficiente em disco (mínimo recomendado: 500MB)."
+    erros=$((erros+1))
+  fi
+
+  if [[ $erros -gt 0 ]]; then
+    linha
+    aviso "$erros problema(s) encontrado(s). A instalação pode falhar."
+    entrada "Deseja continuar mesmo assim? (y/n):"
+    read continuar
+    [[ "$continuar" != "y" && "$continuar" != "Y" ]] && MenuApache && return
+  fi
+
+  # ── Resumo do que será instalado ──────────────────────────────────────────
+  linha
+  echo "  ${NEGRITO}${BRANCO}O seguinte será instalado:${RESET}"
+  echo
+  item "Apache2 + módulos (headers, rewrite, expires)"
+  item "Certbot + python3-certbot-apache"
+  item "Curl, Wget, NMAP, net-tools"
+  item "Repositório PPA ondrej/php"
+  item "PHP (versão a escolher) + módulos essenciais"
+  echo
+  entrada "Confirmar instalação? (y/n):"
+  read confirmar
+  [[ "$confirmar" != "y" && "$confirmar" != "Y" ]] && aviso "Instalação cancelada." && pausar && MenuApache && return
+
+  local TOTAL=7
+  local inicio=$SECONDS
+
+  # ── Passo 1 ───────────────────────────────────────────────────────────────
+  passo 1 $TOTAL "Atualizar repositórios"
   sudo apt update
-  sep
-  info "Instalando Apache..."
-  sudo apt install -y apache2
+  ok "Repositórios atualizados!"
+
+  # ── Passo 2 ───────────────────────────────────────────────────────────────
+  passo 2 $TOTAL "Instalar Apache2"
+  if ja_instalado apache2; then
+    aviso "Apache2 já está instalado — pulando."
+  else
+    sudo apt install -y apache2
+    ok "Apache2 instalado!"
+  fi
   dirConf="
   <IfModule mod_dir.c>\n
        DirectoryIndex index.php index.html index.cgi index.pl index.php index.xhtml index.htm\n
@@ -637,34 +1031,87 @@ InstalarLamp(){
    # vim: syntax=apache ts=4 sw=4 sts=4 sr noet\n"
   sudo echo -e $dirConf > /etc/apache2/mods-enabled/dir.conf
   sudo chown -R www-data:www-data /var/www
-  ok "Apache instalado!"
-  sep
-  info "Aplicando regras UFW..."
-  sudo ufw app info "Apache Full" && ufw allow "Apache Full"
-  sep
-  info "Instalando net-tools..."
-  sudo apt install -y net-tools
-  sep
   info "Ativando módulos Apache (headers, rewrite, expires)..."
-  sudo a2enmod headers && a2enmod rewrite && a2enmod expires
+  sudo a2enmod headers rewrite expires
+  info "Aplicando regras UFW..."
+  sudo ufw app info "Apache Full" &>/dev/null && sudo ufw allow "Apache Full" &>/dev/null
+  ok "Apache configurado!"
+
+  # ── Passo 3 ───────────────────────────────────────────────────────────────
+  passo 3 $TOTAL "Instalar ferramentas essenciais (Curl, Wget, net-tools, NMAP)"
+  sudo apt install -y curl wget net-tools nmap
+  ok "Ferramentas instaladas!"
+
+  # ── Passo 4 ───────────────────────────────────────────────────────────────
+  passo 4 $TOTAL "Instalar Certbot"
+  if ja_instalado certbot; then
+    aviso "Certbot já está instalado — pulando."
+  else
+    sudo apt install -y certbot python3-certbot-apache
+    ok "Certbot instalado!"
+  fi
+
+  # ── Passo 5 ───────────────────────────────────────────────────────────────
+  passo 5 $TOTAL "Adicionar repositório PHP (ondrej/php)"
+  if grep -r "ondrej/php" /etc/apt/sources.list.d/ &>/dev/null; then
+    aviso "Repositório ondrej/php já existe — pulando."
+  else
+    sudo apt install -y software-properties-common ppa-purge
+    sudo add-apt-repository ppa:ondrej/php -y
+    sudo apt update
+    ok "Repositório PHP adicionado!"
+  fi
+
+  # ── Passo 6 ───────────────────────────────────────────────────────────────
+  passo 6 $TOTAL "Instalar PHP"
+  entrada "Versão do PHP (Ex: 8.3 — deixe vazio para a mais recente):"
+  read vPHP
+  echo
+  if [[ -z "$vPHP" ]]; then
+    info "Instalando versão mais recente do PHP..."
+    sudo apt install -y php
+    vPHP=$(php -v 2>/dev/null | grep -oP '^\S+\s+\K\d+\.\d+' | head -1)
+  else
+    info "Instalando PHP $vPHP..."
+    sudo apt install -y php$vPHP
+  fi
   sep
-  info "Instalando Curl e Wget..."
-  sudo apt install -y curl && sudo apt install -y wget
-  sep
-  info "Instalando Certbot..."
-  sudo apt install -y certbot python3-certbot-apache
-  sep
-  info "Instalando NMAP..."
-  sudo apt install -y nmap
-  sep
-  info "Instalando software-properties-common..."
-  sudo apt install -y software-properties-common
-  sep
-  info "Adicionando repositório PHP (ondrej/php)..."
-  sudo apt install -y ppa-purge
-  sudo add-apt-repository ppa:ondrej/php -y
+  info "Instalando módulos do PHP $vPHP..."
+  sudo apt install -y \
+    php${vPHP}-common php${vPHP}-cli php${vPHP}-cgi \
+    php${vPHP}-curl php${vPHP}-gd php${vPHP}-mbstring \
+    php${vPHP}-intl php${vPHP}-imap php${vPHP}-sqlite3 \
+    php${vPHP}-tidy php${vPHP}-xmlrpc php${vPHP}-xsl \
+    php${vPHP}-opcache php${vPHP}-zip php${vPHP}-pgsql 2>/dev/null
+  sudo phpenmod pdo_pgsql 2>/dev/null || true
+  ok "PHP $vPHP e módulos instalados!"
+
+  # ── Passo 7 ───────────────────────────────────────────────────────────────
+  passo 7 $TOTAL "Finalizar e reiniciar serviços"
+  info "Limpando resíduos..."
+  sudo apt autoclean -y && sudo apt --purge autoremove -y
+  info "Reiniciando Apache..."
+  sudo systemctl restart apache2
+  ok "Apache reiniciado!"
+
+  # ── Sumário ───────────────────────────────────────────────────────────────
+  local duracao=$((SECONDS - inicio))
+  local ip=$(hostname -I | awk '{print $1}')
+  local v_apache=$(apache2 -v 2>/dev/null | grep "Server version" | awk '{print $3}')
+  local v_php=$(php -v 2>/dev/null | head -1 | awk '{print $2}')
+
   linha
-  InstalarVersaoPhpLamp
+  echo "  ${NEGRITO}${VERDE_CLARO}✔  Instalação concluída em ${duracao}s!${RESET}"
+  echo
+  item "Apache:   ${v_apache:-instalado}"
+  item "PHP:      ${v_php:-instalado}"
+  item "Certbot:  $(certbot --version 2>/dev/null || echo 'instalado')"
+  sep
+  echo "  ${NEGRITO}${BRANCO}Acesse:${RESET}"
+  echo "  ${CIANO}http://${ip}${RESET}"
+  linha
+  pausar
+  MenuApache
 }
 DesinstalarLamp(){
   titulo "Desinstalar LAMP"
@@ -1273,11 +1720,14 @@ MenuNode(){
   opcao_menu  2 "Instalar Node (Repositório Nativo)"
   opcao_menu  3 "Instalar última versão do Node"
   opcao_menu  4 "Instalar outra versão do Node"
+  sep
   opcao_menu  5 "Versões do Node disponíveis (NVM)"
   opcao_menu  6 "Versões do Node instaladas"
+  sep
   opcao_menu  7 "Habilitar última versão do Node"
   opcao_menu  8 "Habilitar outra versão do Node"
   opcao_menu  9 "Versão ativa do Node (NVM)"
+  sep
   opcao_menu 10 "Versão ativa do Node (Nativo)"
   opcao_menu 11 "Desinstalar versão do Node"
   echo
@@ -1307,16 +1757,19 @@ MenuRedis(){
   cabecalho "REDIS" "Douglas S. Santos"
   opcao_menu 1 "Instalar Redis"
   opcao_menu 2 "Desinstalar Redis"
+  sep
   opcao_menu 3 "Iniciar Redis"
   opcao_menu 4 "Parar Redis"
   opcao_menu 5 "Reiniciar Redis"
   opcao_menu 6 "Status do Redis"
+  sep
   opcao_menu 7 "Informações do Redis"
   opcao_menu 8 "Testar Conexão"
   opcao_menu 9 "Limpar Cache"
-  echo
+  echo 
   opcao_menu 0 "Voltar ao Menu Principal"
   echo
+  sep
   entrada "Escolha uma opção:"
   read opcao
   linha
@@ -1335,21 +1788,52 @@ MenuRedis(){
   esac
 }
 
+MenuBackupPostgres(){
+  cabecalho "POSTGRESQL — BACKUP" "Douglas S. Santos"
+  opcao_menu 1 "Criar Backup (banco único ou todos)"
+  opcao_menu 2 "Restaurar Backup"
+  opcao_menu 3 "Listar Backups"
+  opcao_menu 4 "Limpar Backups Antigos"
+  sep
+  opcao_menu 5 "Agendar Backup Automático (cron)"
+  opcao_menu 6 "Ver Agendamentos"
+  opcao_menu 7 "Remover Agendamento"
+  echo
+  opcao_menu 0 "Voltar ao Menu PostgreSQL"
+  echo
+  entrada "Escolha uma opção:"
+  read opcao
+  linha
+  case $opcao in
+    1) BackupBancoPostgres;;
+    2) RestaurarBancoPostgres;;
+    3) ListarBackupsPostgres;;
+    4) LimparBackupsAntigos;;
+    5) AgendarBackupPostgres;;
+    6) VerAgendamentosBackup;;
+    7) RemoverAgendamentoBackup;;
+    0) MenuPostgres;;
+    *) erro "Opção inválida!" ; sleep 1 ; MenuBackupPostgres ;;
+  esac
+}
+
 MenuPostgres(){
   cabecalho "POSTGRESQL" "Douglas S. Santos"
   opcao_menu  1 "Instalar PostgreSQL"
   opcao_menu  2 "Desinstalar PostgreSQL"
+  sep
   opcao_menu  3 "Iniciar PostgreSQL"
   opcao_menu  4 "Parar PostgreSQL"
   opcao_menu  5 "Reiniciar PostgreSQL"
   opcao_menu  6 "Status do PostgreSQL"
+  sep
   opcao_menu  7 "Criar Usuário"
   opcao_menu  8 "Deletar Usuário"
   opcao_menu  9 "Criar Banco de Dados"
   opcao_menu 10 "Deletar Banco de Dados"
   opcao_menu 11 "Listar Bancos de Dados"
-  opcao_menu 12 "Backup de Banco"
-  opcao_menu 13 "Restaurar Banco"
+  sep
+  opcao_menu 12 "Backup / Restore"
   echo
   opcao_menu  0 "Voltar ao Menu Principal"
   echo
@@ -1368,8 +1852,7 @@ MenuPostgres(){
     9) CriarBancoDadosPostgres;;
     10) DeletarBancoPostgres;;
     11) ListarBancosPostgres;;
-    12) BackupBancoPostgres;;
-    13) RestaurarBancoPostgres;;
+    12) MenuBackupPostgres;;
     0) Menu;;
     *) erro "Opção inválida!" ; sleep 1 ; MenuPostgres ;;
   esac
@@ -1403,10 +1886,13 @@ MenuPHP(){
   cabecalho "PHP" "Douglas S. Santos"
   opcao_menu 1 "Instalar versão atual do PHP"
   opcao_menu 2 "Instalar outra versão do PHP"
+  sep
   opcao_menu 3 "Listar versões do PHP instaladas"
   opcao_menu 4 "Habilitar outra versão do PHP"
+  sep
   opcao_menu 5 "Desinstalar versão do PHP"
   opcao_menu 6 "Adicionar repositório PPA (ondrej/php)"
+  sep
   opcao_menu 7 "Configurar php.ini"
   echo
   opcao_menu 0 "Voltar ao Menu Principal"
