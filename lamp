@@ -6,697 +6,630 @@
 
 
 email="webmaster@gmail.com"
+
+# ─── Cores ────────────────────────────────────────────────────────────────────
+RESET="\e[0m"
+NEGRITO="\e[1m"
+DIM="\e[2m"
+
+PRETO="\e[30m"
+VERMELHO="\e[31m"
+VERDE="\e[32m"
+AMARELO="\e[33m"
+AZUL="\e[34m"
+MAGENTA="\e[35m"
+CIANO="\e[36m"
+BRANCO="\e[37m"
+
+BG_AZUL="\e[44m"
+BG_CIANO="\e[46m"
+BG_PRETO="\e[40m"
+
+CINZA="\e[90m"
+VERDE_CLARO="\e[92m"
+AMARELO_CLARO="\e[93m"
+AZUL_CLARO="\e[94m"
+MAGENTA_CLARO="\e[95m"
+CIANO_CLARO="\e[96m"
+
+# ─── Helpers visuais ──────────────────────────────────────────────────────────
+sep()    { echo -e "${CINZA}  ────────────────────────────────────────────────${RESET}"; }
+linha()  { echo -e "${CINZA}  ════════════════════════════════════════════════${RESET}"; }
+
+titulo() { echo; echo -e "  ${NEGRITO}${CIANO_CLARO}$1${RESET}"; sep; }
+
+ok()     { echo -e "  ${VERDE_CLARO}✔  ${BRANCO}$1${RESET}"; }
+erro()   { echo -e "  ${VERMELHO}✖  ${BRANCO}$1${RESET}"; }
+info()   { echo -e "  ${AMARELO_CLARO}➜  ${BRANCO}$1${RESET}"; }
+aviso()  { echo -e "  ${AMARELO}⚠   ${BRANCO}$1${RESET}"; }
+item()   { echo -e "  ${CIANO}•  ${BRANCO}$1${RESET}"; }
+
+entrada(){
+  echo -en "  ${CIANO}▶  ${AMARELO_CLARO}$1${RESET} "
+}
+
+pausar() {
+  echo
+  echo -en "  ${CINZA}Pressione ENTER para voltar...${RESET}"
+  read
+}
+
+cabecalho(){
+  local titulo="$1"
+  local subtitulo="$2"
+  clear
+  echo
+  echo -e "  ${NEGRITO}${BG_PRETO}${CIANO_CLARO}                                                    ${RESET}"
+  echo -e "  ${NEGRITO}${BG_PRETO}${CIANO_CLARO}   $titulo${RESET}"
+  if [[ -n "$subtitulo" ]]; then
+    echo -e "  ${NEGRITO}${BG_PRETO}${CINZA}   $subtitulo${RESET}"
+  fi
+  echo -e "  ${NEGRITO}${BG_PRETO}${CIANO_CLARO}                                                    ${RESET}"
+  echo
+}
+
+opcao_menu(){
+  local num="$1"
+  local desc="$2"
+  printf "  ${CIANO}[${AMARELO_CLARO}%2s${CIANO}]${RESET}  %s\n" "$num" "$desc"
+}
+
 clear
 
 adicionarRepoPhp(){
-  echo "Instalando as propriedades de repositório!..."
+  titulo "Repositório PHP (ondrej/php)"
+  info "Instalando software-properties-common..."
   sudo apt install -y software-properties-common
-  echo "============================"
-  echo
-  echo "Adicionando o Repositório do PHP!..."
+  sep
+  info "Adicionando PPA ondrej/php..."
   sudo apt install -y ppa-purge
   sudo add-apt-repository ppa:ondrej/php -y
-  echo "============================"
+  ok "Repositório adicionado com sucesso!"
+  linha
   MenuPHP
 }
 
 InstalarVersaoPhp(){
-
-  echo
-   echo -n " >>> Digite a versão do PHP desejada (Ex: 8.1): "
-   read vPHP
-   echo "============================"
-   echo "Atualizando Repositórios do Linux!..."
-   sudo apt update
-   echo "============================"
-   echo
-   echo "Instalando o PHP $vPHP!..."
-   sudo apt install -y php$vPHP
-   echo "============================"
-   echo
-   echo "Instalando Modulos necessários do PHP!..."
-   sudo apt install -y php$vPHP-pgsql
-   sudo apt install -y php$vPHP-ssh2 php$vPHP-common php$vPHP-cli php$vPHP-cgi php$vPHP-curl php$vPHP-gd
-   sudo apt install -y php$vPHP-mbstring php$vPHP-intl php$vPHP-imap php$vPHP-sqlite3 php$vPHP-tidy php$vPHP-xmlrpc
-   sudo apt install -y php$vPHP-xsl php$vPHP-opcache php$vPHP-zip
-   sudo phpenmod pdo_pgsql
-   echo "============================"
-   echo
-   echo "Limpando residos da instalação!..."
-   sudo apt autoclean -y && apt --purge autoremove -y
-   echo "============================"
-   echo
-   echo "Reiniciando Apache"
-   sudo systemctl restart apache2
-   echo "Apache Reiniciado com sucesso!"
-   echo
-   echo "============================"
-   echo "PHP Instalado com sucesso!..."
-   echo "============================"
-   echo
-   echo "Digite enter para voltar ao Menu Principal"
-   read
-   MenuPHP
+  titulo "Instalar Versão Específica do PHP"
+  entrada "Digite a versão do PHP desejada (Ex: 8.1):"
+  read vPHP
+  sep
+  info "Atualizando repositórios..."
+  sudo apt update
+  sep
+  info "Instalando PHP $vPHP..."
+  sudo apt install -y php$vPHP
+  sep
+  info "Instalando módulos do PHP $vPHP..."
+  sudo apt install -y php$vPHP-pgsql
+  sudo apt install -y php$vPHP-ssh2 php$vPHP-common php$vPHP-cli php$vPHP-cgi php$vPHP-curl php$vPHP-gd
+  sudo apt install -y php$vPHP-mbstring php$vPHP-intl php$vPHP-imap php$vPHP-sqlite3 php$vPHP-tidy php$vPHP-xmlrpc
+  sudo apt install -y php$vPHP-xsl php$vPHP-opcache php$vPHP-zip
+  sudo phpenmod pdo_pgsql
+  sep
+  info "Limpando resíduos..."
+  sudo apt autoclean -y && apt --purge autoremove -y
+  sep
+  info "Reiniciando Apache..."
+  sudo systemctl restart apache2
+  ok "Apache reiniciado!"
+  ok "PHP $vPHP instalado com sucesso!"
+  linha
+  pausar
+  MenuPHP
 }
 InstalarVersaoPhpLamp(){
-
-  echo
-   echo -n " >>> Digite a versão do PHP desejada (Ex: 8.1): "
-   read vPHP
-   echo "============================"
-   echo "Atualizando Repositórios do Linux!..."
-   sudo apt update
-   echo "============================"
-   echo
-   echo "Instalando o PHP $vPHP!..."
-   sudo apt install -y php$vPHP
-   echo "============================"
-   echo
-   echo "Instalando Modulos necessários do PHP!..."
-   sudo apt install -y php$vPHP-pgsql
-   sudo apt install -y php$vPHP-ssh2 php$vPHP-common php$vPHP-cli php$vPHP-cgi php$vPHP-curl php$vPHP-gd
-   sudo apt install -y php$vPHP-mbstring php$vPHP-intl php$vPHP-imap php$vPHP-sqlite3 php$vPHP-tidy php$vPHP-xmlrpc
-   sudo apt install -y php$vPHP-xsl php$vPHP-opcache php$vPHP-zip
-   sudo phpenmod pdo_pgsql
-   echo "============================"
-   echo
-   echo "Limpando residos da instalação!..."
-   sudo apt autoclean -y && apt --purge autoremove -y
-   echo "============================"
-   echo
-   echo "Reiniciando Apache"
-   sudo systemctl restart apache2
-   echo "Apache Reiniciado com sucesso!"
-   echo
-   echo "============================"
-   echo "PHP Instalado com sucesso!..."
-   echo "============================"
-   echo
-   echo "Digite enter para voltar ao Menu Principal"
-   read
-   MenuApache
+  titulo "Instalar PHP para o LAMP"
+  entrada "Digite a versão do PHP desejada (Ex: 8.1):"
+  read vPHP
+  sep
+  info "Atualizando repositórios..."
+  sudo apt update
+  sep
+  info "Instalando PHP $vPHP..."
+  sudo apt install -y php$vPHP
+  sep
+  info "Instalando módulos do PHP $vPHP..."
+  sudo apt install -y php$vPHP-pgsql
+  sudo apt install -y php$vPHP-ssh2 php$vPHP-common php$vPHP-cli php$vPHP-cgi php$vPHP-curl php$vPHP-gd
+  sudo apt install -y php$vPHP-mbstring php$vPHP-intl php$vPHP-imap php$vPHP-sqlite3 php$vPHP-tidy php$vPHP-xmlrpc
+  sudo apt install -y php$vPHP-xsl php$vPHP-opcache php$vPHP-zip
+  sudo phpenmod pdo_pgsql
+  sep
+  info "Limpando resíduos..."
+  sudo apt autoclean -y && apt --purge autoremove -y
+  sep
+  info "Reiniciando Apache..."
+  sudo systemctl restart apache2
+  ok "Apache reiniciado!"
+  ok "PHP $vPHP instalado com sucesso!"
+  linha
+  pausar
+  MenuApache
 }
 
 InstalarUltimaVersaoPhp(){
-   echo
-   echo "Atualizando Repositórios do Linux!..."
-   sudo apt update
-   echo "============================"
-   echo
-   echo "Instalando o versão atual do PHP!..."
-   sudo apt install -y php
-   echo "============================"
-   echo
-   echo "Instalando Modulos necessários do PHP!..."
-   sudo apt install -y php-pgsql
-   sudo apt install -y php-ssh2 php-common php-cli php-cgi php-curl php-gd
-   sudo apt install -y php-mbstring php-intl php-imap php-sqlite3 php-tidy php-xmlrpc
-   sudo apt install -y php-xsl php-opcache php-zip
-   sudo phpenmod pdo_pgsql
-   echo "============================"
-   echo
-   echo "Limpando residos da instalação!..."
-   sudo apt autoclean -y && apt --purge autoremove -y
-   echo "============================"
-   echo
-   echo "Reiniciando Apache"
-   sudo systemctl restart apache2
-   echo "Apache Reiniciado com sucesso!"
-   echo
-   echo "============================"
-   echo "PHP Instalado com sucesso!..."
-   echo "============================"
-   echo
-   echo "Digite enter para voltar ao Menu Principal"
-   read
-   MenuPHP
+  titulo "Instalar Versão Atual do PHP"
+  info "Atualizando repositórios..."
+  sudo apt update
+  sep
+  info "Instalando PHP (versão atual)..."
+  sudo apt install -y php
+  sep
+  info "Instalando módulos necessários..."
+  sudo apt install -y php-pgsql
+  sudo apt install -y php-ssh2 php-common php-cli php-cgi php-curl php-gd
+  sudo apt install -y php-mbstring php-intl php-imap php-sqlite3 php-tidy php-xmlrpc
+  sudo apt install -y php-xsl php-opcache php-zip
+  sudo phpenmod pdo_pgsql
+  sep
+  info "Limpando resíduos..."
+  sudo apt autoclean -y && apt --purge autoremove -y
+  sep
+  info "Reiniciando Apache..."
+  sudo systemctl restart apache2
+  ok "Apache reiniciado!"
+  ok "PHP instalado com sucesso!"
+  linha
+  pausar
+  MenuPHP
 }
 ListarVersoesInstaladasPHP(){
-  echo
-  echo "====================================="
-  echo " Lista de versões do PHP Instaladas "
-  echo "====================================="
-  echo
-  sudo update-alternatives --list  php
-  echo
-  echo "=========================================="
-  echo
-  echo "Digite enter para voltar ao Menu Principal"
-  read
+  titulo "Versões do PHP Instaladas"
+  sudo update-alternatives --list php
+  linha
+  pausar
   MenuPHP
 }
 UsarOutraVersaoPHP(){
-  echo
-  echo -n " >>> Informe a versão desejada do PHP (Ex: 8.1): "
+  titulo "Habilitar Versão do PHP"
+  entrada "Informe a versão desejada (Ex: 8.1):"
   read vPHP
-  echo "===================================="
-  echo
-  echo "Habilitando versão do PHP...  "
+  sep
+  info "Habilitando PHP $vPHP..."
   sudo update-alternatives --set php /usr/bin/php$vPHP
-  echo "===================================="
-  echo
-  echo "Digite enter para voltar ao Menu Principal"
-  read
+  ok "PHP $vPHP habilitado com sucesso!"
+  linha
+  pausar
   MenuPHP
 }
 DesinstalarPHP(){
-  echo
-  echo -n " >>> Informe a versão do PHP que deseja desinstalar (Ex: 8.1): "
+  titulo "Desinstalar Versão do PHP"
+  entrada "Informe a versão a desinstalar (Ex: 8.1):"
   read vPHP
-  echo "===================================="
-  echo
-  echo "Desinstalando versão do PHP...  "
+  sep
+  info "Desinstalando PHP $vPHP..."
   sudo apt remove -y php$vPHP*
   sudo apt purge -y php$vPHP*
-  echo "===================================="
-  echo
-  echo "Digite enter para voltar ao Menu Principal"
-  read
+  ok "PHP $vPHP removido com sucesso!"
+  linha
+  pausar
   MenuPHP
 }
 InstalarRedis(){
-  echo
-  echo "Atualizando Repositórios do Linux!..."
+  titulo "Instalar Redis"
+  info "Atualizando repositórios..."
   sudo apt update
-  echo "============================"
-  echo
-  echo "Instalando Redis!..."
+  sep
+  info "Instalando Redis Server..."
   sudo apt install -y redis-server
-  echo "============================"
-  echo
-  echo "Habilitando Redis para iniciar com o sistema!..."
+  sep
+  info "Habilitando Redis no boot..."
   sudo systemctl enable redis-server.service
   sudo systemctl start redis-server.service
-  echo "============================"
-  echo
-  echo "Redis instalado e iniciado com sucesso!"
-  echo "============================"
-  echo
-  echo "Digite enter para voltar ao Menu"
-  read
+  ok "Redis instalado e iniciado com sucesso!"
+  linha
+  pausar
   MenuRedis
 }
 DesinstalarRedis(){
-  echo
-  echo "Desinstalando Redis!..."
+  titulo "Desinstalar Redis"
+  info "Parando e removendo Redis..."
   sudo systemctl stop redis-server.service
-  sudo apt remove -y redis-server
-  sudo apt purge -y redis-server
+  sudo apt remove -y redis-server && sudo apt purge -y redis-server
   sudo apt autoremove -y
-  echo "============================"
-  echo
-  echo "Redis desinstalado com sucesso!"
-  echo "============================"
-  echo
-  echo "Digite enter para voltar ao Menu"
-  read
+  ok "Redis desinstalado com sucesso!"
+  linha
+  pausar
   MenuRedis
 }
 IniciarRedis(){
-  echo
-  echo "Iniciando Redis!..."
+  titulo "Iniciar Redis"
+  info "Iniciando Redis..."
   sudo systemctl start redis-server.service
-  echo "============================"
-  echo
-  echo "Digite enter para voltar ao Menu"
-  read
+  ok "Redis iniciado!"
+  linha
+  pausar
   MenuRedis
 }
 PararRedis(){
-  echo
-  echo "Parando Redis!..."
+  titulo "Parar Redis"
+  info "Parando Redis..."
   sudo systemctl stop redis-server.service
-  echo "============================"
-  echo
-  echo "Digite enter para voltar ao Menu"
-  read
+  ok "Redis parado!"
+  linha
+  pausar
   MenuRedis
 }
 ReiniciarRedis(){
-  echo
-  echo "Reiniciando Redis!..."
+  titulo "Reiniciar Redis"
+  info "Reiniciando Redis..."
   sudo systemctl restart redis-server.service
-  echo "============================"
-  echo
-  echo "Digite enter para voltar ao Menu"
-  read
+  ok "Redis reiniciado!"
+  linha
+  pausar
   MenuRedis
 }
 StatusRedis(){
-  echo
-  echo "============================"
-  echo "       Status do Redis      "
-  echo "============================"
+  titulo "Status do Redis"
   sudo systemctl status redis-server.service
-  echo "============================"
-  echo
-  echo "Digite enter para voltar ao Menu"
-  read
+  linha
+  pausar
   MenuRedis
 }
 InfoRedis(){
-  echo
-  echo "============================"
-  echo "   Informações do Redis     "
-  echo "============================"
-  redis-cli info server 2>/dev/null || echo "Redis não está rodando ou não está instalado."
-  echo "============================"
-  echo
-  echo "Digite enter para voltar ao Menu"
-  read
+  titulo "Informações do Redis"
+  redis-cli info server 2>/dev/null || erro "Redis não está rodando ou não está instalado."
+  linha
+  pausar
   MenuRedis
 }
 TestarRedis(){
-  echo
-  echo "============================"
-  echo "   Teste de conexão Redis   "
-  echo "============================"
+  titulo "Teste de Conexão Redis"
   result=$(redis-cli ping 2>/dev/null)
   if [[ "$result" == "PONG" ]]; then
-    echo " Redis respondeu: PONG — conexão OK!"
+    ok "Redis respondeu: PONG — conexão OK!"
   else
-    echo " Redis não respondeu. Verifique se o serviço está rodando."
+    erro "Redis não respondeu. Verifique se o serviço está rodando."
   fi
-  echo "============================"
-  echo
-  echo "Digite enter para voltar ao Menu"
-  read
+  linha
+  pausar
   MenuRedis
 }
 LimparCacheRedis(){
-  echo
-  echo -n " >>> Tem certeza que deseja limpar todo o cache do Redis? (y/n): "
+  titulo "Limpar Cache do Redis"
+  aviso "Isso apagará TODOS os dados em cache!"
+  entrada "Confirmar? (y/n):"
   read confirm
-  echo "============================"
+  sep
   if [[ "$confirm" == "y" || "$confirm" == "Y" ]]; then
     redis-cli FLUSHALL
-    echo "Cache do Redis limpo com sucesso!"
+    ok "Cache do Redis limpo com sucesso!"
   else
-    echo "Operação cancelada."
+    aviso "Operação cancelada."
   fi
-  echo "============================"
-  echo
-  echo "Digite enter para voltar ao Menu"
-  read
+  linha
+  pausar
   MenuRedis
 }
 
 InstalarPostgres(){
-  echo
-  echo "Atualizando Repositórios do Linux!..."
+  titulo "Instalar PostgreSQL"
+  info "Atualizando repositórios..."
   sudo apt update
-  echo "============================"
-  echo
-  echo "Instalando PostgreSQL!..."
+  sep
+  info "Instalando PostgreSQL..."
   sudo apt install -y postgresql postgresql-contrib
-  echo "============================"
-  echo
-  echo "Iniciando Serviços do PostgreSQL!..."
+  sep
+  info "Habilitando PostgreSQL no boot..."
   sudo systemctl start postgresql.service
   sudo systemctl enable postgresql.service
-  echo "============================"
-  echo
-  echo "PostgreSQL instalado e iniciado com sucesso!"
-  echo "============================"
-  echo
-  echo "Digite enter para voltar ao Menu"
-  read
+  ok "PostgreSQL instalado e iniciado com sucesso!"
+  linha
+  pausar
   MenuPostgres
 }
 DesinstalarPostgres(){
-  echo
-  echo "Desinstalando PostgreSQL!..."
+  titulo "Desinstalar PostgreSQL"
+  aviso "Todos os bancos de dados serão removidos permanentemente!"
+  entrada "Confirmar? (y/n):"
+  read confirm
+  if [[ "$confirm" != "y" && "$confirm" != "Y" ]]; then
+    aviso "Operação cancelada."
+    pausar
+    MenuPostgres
+    return
+  fi
+  sep
+  info "Parando e removendo PostgreSQL..."
   sudo systemctl stop postgresql.service
   sudo apt --purge remove -y postgresql postgresql-*
-  sudo rm -rf /var/lib/postgresql/
-  sudo rm -rf /var/log/postgresql/
-  sudo rm -rf /etc/postgresql/
+  sudo rm -rf /var/lib/postgresql/ /var/log/postgresql/ /etc/postgresql/
   sudo deluser postgres 2>/dev/null || true
-  echo "============================"
-  echo
-  echo "Limpando resíduos da instalação!..."
+  sep
+  info "Limpando resíduos..."
   sudo apt autoclean -y && sudo apt --purge autoremove -y
-  echo "============================"
-  echo
-  echo "PostgreSQL desinstalado com sucesso!"
-  echo "============================"
-  echo
-  echo "Digite enter para voltar ao Menu"
-  read
+  ok "PostgreSQL desinstalado com sucesso!"
+  linha
+  pausar
   MenuPostgres
 }
 IniciarPostgres(){
-  echo
-  echo "Iniciando PostgreSQL!..."
+  titulo "Iniciar PostgreSQL"
+  info "Iniciando PostgreSQL..."
   sudo systemctl start postgresql.service
-  echo "============================"
-  echo
-  echo "Digite enter para voltar ao Menu"
-  read
+  ok "PostgreSQL iniciado!"
+  linha
+  pausar
   MenuPostgres
 }
 PararPostgres(){
-  echo
-  echo "Parando PostgreSQL!..."
+  titulo "Parar PostgreSQL"
+  info "Parando PostgreSQL..."
   sudo systemctl stop postgresql.service
-  echo "============================"
-  echo
-  echo "Digite enter para voltar ao Menu"
-  read
+  ok "PostgreSQL parado!"
+  linha
+  pausar
   MenuPostgres
 }
 ReiniciarPostgres(){
-  echo
-  echo "Reiniciando PostgreSQL!..."
+  titulo "Reiniciar PostgreSQL"
+  info "Reiniciando PostgreSQL..."
   sudo systemctl restart postgresql.service
-  echo "============================"
-  echo
-  echo "Digite enter para voltar ao Menu"
-  read
+  ok "PostgreSQL reiniciado!"
+  linha
+  pausar
   MenuPostgres
 }
 StatusPostgres(){
-  echo
-  echo "============================"
-  echo "     Status do PostgreSQL   "
-  echo "============================"
+  titulo "Status do PostgreSQL"
   sudo systemctl status postgresql.service
-  echo "============================"
-  echo
-  echo "Digite enter para voltar ao Menu"
-  read
+  linha
+  pausar
   MenuPostgres
 }
 CriarUsuarioPostgres(){
-  echo
-  echo -n " >>> Digite o nome do usuário: "
+  titulo "Criar Usuário PostgreSQL"
+  entrada "Nome do usuário:"
   read pguser
-  echo "============================"
-  echo -n " >>> Digite a senha do usuário: "
+  sep
+  echo -en "  ${CIANO}▶  ${AMARELO_CLARO}Senha do usuário:${RESET} "
   read -s pgpass
   echo
-  echo "============================"
-  echo "Criando usuário $pguser no PostgreSQL!..."
+  sep
+  info "Criando usuário $pguser..."
   sudo -u postgres psql -c "CREATE USER $pguser WITH PASSWORD '$pgpass';"
-  echo "============================"
-  echo
-  echo "Usuário $pguser criado com sucesso!"
-  echo "============================"
-  echo
-  echo "Digite enter para voltar ao Menu"
-  read
+  ok "Usuário $pguser criado com sucesso!"
+  linha
+  pausar
   MenuPostgres
 }
 CriarBancoDadosPostgres(){
-  echo
-  echo -n " >>> Digite o nome do banco de dados: "
+  titulo "Criar Banco de Dados PostgreSQL"
+  entrada "Nome do banco de dados:"
   read pgdb
-  echo "============================"
-  echo -n " >>> Digite o dono do banco (usuário postgres): "
+  sep
+  entrada "Dono do banco (usuário postgres):"
   read pgowner
-  echo "============================"
-  echo "Criando banco de dados $pgdb!..."
+  sep
+  info "Criando banco $pgdb..."
   sudo -u postgres psql -c "CREATE DATABASE $pgdb OWNER $pgowner;"
-  echo "============================"
-  echo
-  echo "Banco $pgdb criado com sucesso!"
-  echo "============================"
-  echo
-  echo "Digite enter para voltar ao Menu"
-  read
+  ok "Banco $pgdb criado com sucesso!"
+  linha
+  pausar
   MenuPostgres
 }
 ListarBancosPostgres(){
-  echo
-  echo "============================"
-  echo "  Bancos de dados no PostgreSQL  "
-  echo "============================"
+  titulo "Bancos de Dados no PostgreSQL"
   sudo -u postgres psql -c "\l"
-  echo "============================"
-  echo
-  echo "Digite enter para voltar ao Menu"
-  read
+  linha
+  pausar
   MenuPostgres
 }
 BackupBancoPostgres(){
-  echo
-  echo -n " >>> Digite o nome do banco de dados: "
+  titulo "Backup de Banco PostgreSQL"
+  entrada "Nome do banco de dados:"
   read pgdb
-  echo "============================"
+  sep
   timestamp=$(date +"%Y%m%d_%H%M%S")
   backupfile="/var/backups/pg_${pgdb}_${timestamp}.sql"
   sudo mkdir -p /var/backups
-  echo "Criando backup do banco $pgdb!..."
+  info "Criando backup do banco $pgdb..."
   sudo -u postgres pg_dump $pgdb > $backupfile
-  echo "============================"
-  echo
+  sep
   if [ -f "$backupfile" ]; then
     tamanho=$(du -sh $backupfile | awk '{print $1}')
-    echo " Backup criado com sucesso!"
-    echo " Arquivo: $backupfile"
-    echo " Tamanho: $tamanho"
+    ok "Backup criado com sucesso!"
+    item "Arquivo: $backupfile"
+    item "Tamanho: $tamanho"
   else
-    echo " Falha ao criar o backup!"
+    erro "Falha ao criar o backup!"
   fi
-  echo "============================"
-  echo
-  echo "Digite enter para voltar ao Menu"
-  read
+  linha
+  pausar
   MenuPostgres
 }
 RestaurarBancoPostgres(){
-  echo
-  echo "============================"
-  echo "  Backups disponíveis em /var/backups  "
-  echo "============================"
-  ls /var/backups/pg_*.sql 2>/dev/null || echo "Nenhum backup de banco encontrado."
-  echo "============================"
-  echo
-  echo -n " >>> Digite o caminho completo do arquivo .sql: "
+  titulo "Restaurar Banco PostgreSQL"
+  info "Backups disponíveis em /var/backups:"
+  sep
+  ls /var/backups/pg_*.sql 2>/dev/null || aviso "Nenhum backup de banco encontrado."
+  sep
+  entrada "Caminho completo do arquivo .sql:"
   read backupfile
-  echo "============================"
-  echo -n " >>> Digite o nome do banco de destino: "
+  sep
+  entrada "Nome do banco de destino:"
   read pgdb
-  echo "============================"
-  echo "Restaurando banco $pgdb!..."
+  sep
+  info "Restaurando banco $pgdb..."
   sudo -u postgres psql -c "CREATE DATABASE $pgdb;" 2>/dev/null || true
   sudo -u postgres psql $pgdb < $backupfile
-  echo "============================"
-  echo " Banco $pgdb restaurado com sucesso!"
-  echo "============================"
-  echo
-  echo "Digite enter para voltar ao Menu"
-  read
+  ok "Banco $pgdb restaurado com sucesso!"
+  linha
+  pausar
   MenuPostgres
 }
 DeletarUsuarioPostgres(){
-  echo
-  echo -n " >>> Digite o nome do usuário a deletar: "
+  titulo "Deletar Usuário PostgreSQL"
+  entrada "Nome do usuário a deletar:"
   read pguser
-  echo "============================"
-  echo "Deletando usuário $pguser!..."
+  sep
+  info "Deletando usuário $pguser..."
   sudo -u postgres psql -c "DROP USER IF EXISTS $pguser;"
-  echo "============================"
-  echo " Usuário $pguser deletado!"
-  echo "============================"
-  echo
-  echo "Digite enter para voltar ao Menu"
-  read
+  ok "Usuário $pguser deletado!"
+  linha
+  pausar
   MenuPostgres
 }
 DeletarBancoPostgres(){
-  echo
-  echo -n " >>> Digite o nome do banco a deletar: "
+  titulo "Deletar Banco de Dados PostgreSQL"
+  entrada "Nome do banco a deletar:"
   read pgdb
-  echo "============================"
-  echo -n " >>> Tem certeza? Isso é IRREVERSÍVEL! (y/n): "
+  sep
+  aviso "Esta operação é IRREVERSÍVEL! O banco $pgdb será apagado."
+  entrada "Confirmar? (y/n):"
   read confirm
-  echo "============================"
+  sep
   if [[ "$confirm" == "y" || "$confirm" == "Y" ]]; then
-    echo "Deletando banco $pgdb!..."
+    info "Deletando banco $pgdb..."
     sudo -u postgres psql -c "DROP DATABASE IF EXISTS $pgdb;"
-    echo " Banco $pgdb deletado!"
+    ok "Banco $pgdb deletado!"
   else
-    echo "Operação cancelada."
+    aviso "Operação cancelada."
   fi
-  echo "============================"
-  echo
-  echo "Digite enter para voltar ao Menu"
-  read
+  linha
+  pausar
   MenuPostgres
 }
 
 InformacoesServidor(){
-  echo
-  echo "============================================="
-  echo "         Informações do Servidor             "
-  echo "============================================="
-  echo
-  echo "--- Sistema Operacional ---"
+  titulo "Informações do Servidor"
+  info "Sistema Operacional:"
   lsb_release -a 2>/dev/null || cat /etc/os-release
-  echo
-  echo "--- Uptime ---"
+  sep
+  info "Uptime:"
   uptime
-  echo
-  echo "--- Uso de Memória ---"
+  sep
+  info "Uso de Memória:"
   free -h
-  echo
-  echo "--- Uso de Disco ---"
+  sep
+  info "Uso de Disco:"
   df -h
-  echo
-  echo "--- Endereços IP ---"
+  sep
+  info "Endereços IP:"
   hostname -I
-  echo
-  echo "--- CPU ---"
+  sep
+  info "CPU:"
   lscpu | grep -E "^(Model name|CPU\(s\)|Thread|Architecture)" 2>/dev/null || cat /proc/cpuinfo | grep "model name" | head -1
-  echo
-  echo "--- Versões Instaladas ---"
-  echo -n "  Apache:    "; apache2 -v 2>/dev/null | head -1 || echo "não instalado"
-  echo -n "  PHP:       "; php -v 2>/dev/null | head -1 || echo "não instalado"
-  echo -n "  Node:      "; node -v 2>/dev/null || echo "não instalado"
-  echo -n "  NPM:       "; npm -v 2>/dev/null || echo "não instalado"
-  echo -n "  Composer:  "; composer --version 2>/dev/null | head -1 || echo "não instalado"
-  echo -n "  PostgreSQL:"; psql --version 2>/dev/null || echo "não instalado"
-  echo -n "  Redis:     "; redis-server --version 2>/dev/null || echo "não instalado"
-  echo
-  echo "============================================="
-  echo
-  echo "Digite enter para voltar ao Menu"
-  read
+  sep
+  info "Versões Instaladas:"
+  item "Apache:     $(apache2 -v 2>/dev/null | head -1 || echo 'não instalado')"
+  item "PHP:        $(php -v 2>/dev/null | head -1 || echo 'não instalado')"
+  item "Node:       $(node -v 2>/dev/null || echo 'não instalado')"
+  item "NPM:        $(npm -v 2>/dev/null || echo 'não instalado')"
+  item "Composer:   $(composer --version 2>/dev/null | head -1 || echo 'não instalado')"
+  item "PostgreSQL: $(psql --version 2>/dev/null || echo 'não instalado')"
+  item "Redis:      $(redis-server --version 2>/dev/null || echo 'não instalado')"
+  linha
+  pausar
   MenuSistema
 }
 AtualizarSistema(){
-  echo
-  echo "Atualizando o sistema!..."
+  titulo "Atualizar Sistema"
+  info "Atualizando pacotes..."
   sudo apt update
-  echo "============================"
+  sep
   sudo apt upgrade -y
-  echo "============================"
-  echo
-  echo "Limpando resíduos!..."
+  sep
+  info "Limpando resíduos..."
   sudo apt autoclean -y && sudo apt --purge autoremove -y
-  echo "============================"
-  echo
-  echo "Sistema atualizado com sucesso!"
-  echo "============================"
-  echo
-  echo "Digite enter para voltar ao Menu"
-  read
+  ok "Sistema atualizado com sucesso!"
+  linha
+  pausar
   MenuSistema
 }
 VerPortasEmUso(){
-  echo
-  echo "============================"
-  echo "     Portas em uso          "
-  echo "============================"
+  titulo "Portas em Uso"
   sudo ss -tlnp 2>/dev/null || sudo netstat -tlnp 2>/dev/null
-  echo "============================"
-  echo
-  echo "Digite enter para voltar ao Menu"
-  read
+  linha
+  pausar
   MenuSistema
 }
 VerServicosAtivos(){
+  titulo "Status dos Serviços do Stack"
   echo
-  echo "============================"
-  echo "     Serviços do Stack      "
-  echo "============================"
-  echo
-  echo "--- Apache ---"
-  sudo systemctl is-active apache2 2>/dev/null && echo "  Status: ATIVO" || echo "  Status: INATIVO"
-  echo
-  echo "--- PostgreSQL ---"
-  sudo systemctl is-active postgresql 2>/dev/null && echo "  Status: ATIVO" || echo "  Status: INATIVO"
-  echo
-  echo "--- Redis ---"
-  sudo systemctl is-active redis-server 2>/dev/null && echo "  Status: ATIVO" || echo "  Status: INATIVO"
-  echo
-  echo "============================"
-  echo
-  echo "Digite enter para voltar ao Menu"
-  read
+  apache_status=$(sudo systemctl is-active apache2 2>/dev/null)
+  pg_status=$(sudo systemctl is-active postgresql 2>/dev/null)
+  redis_status=$(sudo systemctl is-active redis-server 2>/dev/null)
+
+  if [[ "$apache_status" == "active" ]]; then
+    ok "Apache:      ATIVO"
+  else
+    erro "Apache:      INATIVO"
+  fi
+  if [[ "$pg_status" == "active" ]]; then
+    ok "PostgreSQL:  ATIVO"
+  else
+    erro "PostgreSQL:  INATIVO"
+  fi
+  if [[ "$redis_status" == "active" ]]; then
+    ok "Redis:       ATIVO"
+  else
+    erro "Redis:       INATIVO"
+  fi
+  linha
+  pausar
   MenuSistema
 }
 LimparLogsSistema(){
-  echo
-  echo -n " >>> Deseja limpar logs antigos do Apache? (y/n): "
+  titulo "Limpar Logs do Apache"
+  aviso "Os arquivos error.log e access.log serão zerados."
+  entrada "Confirmar? (y/n):"
   read confirm
-  echo "============================"
+  sep
   if [[ "$confirm" == "y" || "$confirm" == "Y" ]]; then
     sudo truncate -s 0 /var/log/apache2/error.log
     sudo truncate -s 0 /var/log/apache2/access.log
-    echo " Logs do Apache limpos!"
+    ok "Logs do Apache limpos!"
   else
-    echo "Operação cancelada."
+    aviso "Operação cancelada."
   fi
-  echo "============================"
-  echo
-  echo "Digite enter para voltar ao Menu"
-  read
+  linha
+  pausar
   MenuSistema
 }
 ConfigurarPhpIni(){
-  echo
+  titulo "Configurar php.ini"
   vphp=$(php -v 2>/dev/null | head -1 | grep -oP '\d+\.\d+' | head -1)
   phpini="/etc/php/$vphp/apache2/php.ini"
-  echo "============================"
-  echo "  Configurar php.ini — PHP $vphp  "
-  echo "  Arquivo: $phpini"
-  echo "============================"
-  echo
-  echo " Valores atuais:"
-  echo -n "  memory_limit:         "; grep "^memory_limit" $phpini 2>/dev/null | awk '{print $3}'
-  echo -n "  upload_max_filesize:  "; grep "^upload_max_filesize" $phpini 2>/dev/null | awk '{print $3}'
-  echo -n "  post_max_size:        "; grep "^post_max_size" $phpini 2>/dev/null | awk '{print $3}'
-  echo -n "  max_execution_time:   "; grep "^max_execution_time" $phpini 2>/dev/null | awk '{print $3}'
-  echo
-  echo "============================"
-  echo -n " >>> memory_limit (ex: 256M) [enter para manter]: "
+  info "PHP detectado: $vphp"
+  item "Arquivo: $phpini"
+  sep
+  info "Valores atuais:"
+  item "memory_limit:         $(grep "^memory_limit" $phpini 2>/dev/null | awk '{print $3}')"
+  item "upload_max_filesize:  $(grep "^upload_max_filesize" $phpini 2>/dev/null | awk '{print $3}')"
+  item "post_max_size:        $(grep "^post_max_size" $phpini 2>/dev/null | awk '{print $3}')"
+  item "max_execution_time:   $(grep "^max_execution_time" $phpini 2>/dev/null | awk '{print $3}')"
+  sep
+  entrada "memory_limit (ex: 256M) [ENTER para manter]:"
   read val_memory
-  echo -n " >>> upload_max_filesize (ex: 64M) [enter para manter]: "
+  entrada "upload_max_filesize (ex: 64M) [ENTER para manter]:"
   read val_upload
-  echo -n " >>> post_max_size (ex: 64M) [enter para manter]: "
+  entrada "post_max_size (ex: 64M) [ENTER para manter]:"
   read val_post
-  echo -n " >>> max_execution_time (ex: 300) [enter para manter]: "
+  entrada "max_execution_time (ex: 300) [ENTER para manter]:"
   read val_exec
-  echo "============================"
-  echo
-  if [[ -n "$val_memory" ]]; then
-    sudo sed -i "s/^memory_limit.*/memory_limit = $val_memory/" $phpini
-    echo " memory_limit definido para $val_memory"
-  fi
-  if [[ -n "$val_upload" ]]; then
-    sudo sed -i "s/^upload_max_filesize.*/upload_max_filesize = $val_upload/" $phpini
-    echo " upload_max_filesize definido para $val_upload"
-  fi
-  if [[ -n "$val_post" ]]; then
-    sudo sed -i "s/^post_max_size.*/post_max_size = $val_post/" $phpini
-    echo " post_max_size definido para $val_post"
-  fi
-  if [[ -n "$val_exec" ]]; then
-    sudo sed -i "s/^max_execution_time.*/max_execution_time = $val_exec/" $phpini
-    echo " max_execution_time definido para $val_exec"
-  fi
-  echo
-  echo "Reiniciando Apache para aplicar as alterações!..."
+  sep
+  [[ -n "$val_memory" ]] && sudo sed -i "s/^memory_limit.*/memory_limit = $val_memory/" $phpini && ok "memory_limit → $val_memory"
+  [[ -n "$val_upload" ]] && sudo sed -i "s/^upload_max_filesize.*/upload_max_filesize = $val_upload/" $phpini && ok "upload_max_filesize → $val_upload"
+  [[ -n "$val_post"   ]] && sudo sed -i "s/^post_max_size.*/post_max_size = $val_post/" $phpini && ok "post_max_size → $val_post"
+  [[ -n "$val_exec"   ]] && sudo sed -i "s/^max_execution_time.*/max_execution_time = $val_exec/" $phpini && ok "max_execution_time → $val_exec"
+  sep
+  info "Reiniciando Apache..."
   sudo systemctl restart apache2
-  echo "Apache reiniciado com sucesso!"
-  echo "============================"
-  echo
-  echo "Digite enter para voltar ao Menu"
-  read
+  ok "Apache reiniciado! Configurações aplicadas."
+  linha
+  pausar
   MenuPHP
 }
 
 InstalarLamp(){
-  echo
-  echo "Atualizando Repositórios do Linux!..."
+  titulo "Instalação do LAMP"
+  info "Atualizando repositórios..."
   sudo apt update
-  echo "============================"
-  echo
-  echo "Instalando Apache!..."
+  sep
+  info "Instalando Apache..."
   sudo apt install -y apache2
-  echo
   dirConf="
   <IfModule mod_dir.c>\n
        DirectoryIndex index.php index.html index.cgi index.pl index.php index.xhtml index.htm\n
@@ -704,117 +637,97 @@ InstalarLamp(){
    # vim: syntax=apache ts=4 sw=4 sts=4 sr noet\n"
   sudo echo -e $dirConf > /etc/apache2/mods-enabled/dir.conf
   sudo chown -R www-data:www-data /var/www
-  echo "============================"
-  echo
-  echo "Aplicando Rules UFW!..."
+  ok "Apache instalado!"
+  sep
+  info "Aplicando regras UFW..."
   sudo ufw app info "Apache Full" && ufw allow "Apache Full"
-  echo "============================"
-  echo
-  echo "Instalando net-tools!..."
+  sep
+  info "Instalando net-tools..."
   sudo apt install -y net-tools
-  echo "============================"
-  echo
-  echo "Ativação de Módulos"
+  sep
+  info "Ativando módulos Apache (headers, rewrite, expires)..."
   sudo a2enmod headers && a2enmod rewrite && a2enmod expires
-  echo "============================"
-  echo
-  echo "Instalando Curl e Wget!..."
+  sep
+  info "Instalando Curl e Wget..."
   sudo apt install -y curl && sudo apt install -y wget
-  echo "============================"
-  echo
-  echo "Instalando o Certbot!..."
+  sep
+  info "Instalando Certbot..."
   sudo apt install -y certbot python3-certbot-apache
-  echo "============================"
-  echo
-  echo "Instalando o NMAP!..."
+  sep
+  info "Instalando NMAP..."
   sudo apt install -y nmap
-  echo "============================"
-  echo
-  echo "Instalando as propriedades de repositório!..."
+  sep
+  info "Instalando software-properties-common..."
   sudo apt install -y software-properties-common
-  echo "============================"
-  echo
-  echo "Adicionando o Repositório do PHP!..."
+  sep
+  info "Adicionando repositório PHP (ondrej/php)..."
   sudo apt install -y ppa-purge
   sudo add-apt-repository ppa:ondrej/php -y
-  echo "============================"
-  echo
+  linha
   InstalarVersaoPhpLamp
-
 }
 DesinstalarLamp(){
-  echo
-  echo "Desinstalando Apache!..."
+  titulo "Desinstalar LAMP"
+  aviso "Esta operação removerá Apache, PHP, Certbot, NMAP, Curl e Wget."
+  entrada "Confirmar desinstalação? (y/n):"
+  read confirm
+  if [[ "$confirm" != "y" && "$confirm" != "Y" ]]; then
+    aviso "Operação cancelada."
+    pausar
+    MenuApache
+    return
+  fi
+  sep
+  info "Parando e removendo Apache..."
   sudo systemctl stop apache2
-  sudo apt remove -y apache2.*
-  sudo apt purge -y apache2.*
+  sudo apt remove -y apache2.* && sudo apt purge -y apache2.*
   sudo apt remove --purge -y apache2
   sudo rm -rf /etc/apache2
-  echo "============================"
-  echo
-  echo "Bloqueado Rules UFW!..."
+  ok "Apache removido!"
+  sep
+  info "Bloqueando regras UFW..."
   sudo ufw deny "Apache Full"
-  echo "============================"
-  echo
-  echo "Desinstalando o net-tools!..."
-  sudo apt remove -y net-tools
-  sudo apt purge -y net-tools
-  echo "============================"
-  echo
-  echo "Desinstalando o PHP"
-  sudo apt remove -y php*
-  sudo apt purge -y php*
-  echo "============================"
-  echo
-  echo "============================"
-  echo
-  echo "Desinstalando o Certbot"
-  sudo apt remove -y certbot
-  sudo apt purge -y certbot
-  echo "============================"
-  echo
-  echo "Desinstalando o NMAP"
-  sudo apt remove -y nmap
-  sudo apt purge -y nmap
-  echo "============================"
-  echo
-  echo "Desinstalando Curl e Wget"
-  sudo apt remove -y curl
-  sudo apt purge -y curl
-  sudo apt remove -y wget
-  sudo apt purge -y wget
-  echo "============================"
-  echo
-  echo "Desinstalando as propriedades de repositório!..."
-  sudo apt remove -y software-properties-common
-  sudo apt purge -y software-properties-common
-  echo "============================"
-  echo
-  echo "Removendo o Repositório do PHP!..."
+  sep
+  info "Removendo net-tools..."
+  sudo apt remove -y net-tools && sudo apt purge -y net-tools
+  sep
+  info "Removendo PHP..."
+  sudo apt remove -y php* && sudo apt purge -y php*
+  ok "PHP removido!"
+  sep
+  info "Removendo Certbot..."
+  sudo apt remove -y certbot && sudo apt purge -y certbot
+  sep
+  info "Removendo NMAP..."
+  sudo apt remove -y nmap && sudo apt purge -y nmap
+  sep
+  info "Removendo Curl e Wget..."
+  sudo apt remove -y curl && sudo apt purge -y curl
+  sudo apt remove -y wget && sudo apt purge -y wget
+  sep
+  info "Removendo software-properties-common..."
+  sudo apt remove -y software-properties-common && sudo apt purge -y software-properties-common
+  sep
+  info "Removendo repositório PHP (ondrej/php)..."
   sudo apt remove -y ppa-purge
   sudo add-apt-repository --remove -y ppa:ondrej/php
   sudo ppa-purge -y ppa:ondrej/php
-  echo "============================"
-  echo
-  echo
-  echo "Limpando residos da instalação!..."
+  sep
+  info "Limpando resíduos..."
   sudo apt autoclean -y && apt --purge autoremove -y
-  echo "============================"
-  echo
-  echo "Digite enter para voltar ao Menu Principal"
-  read
+  ok "LAMP desinstalado com sucesso!"
+  linha
+  pausar
   MenuApache
 }
 AdicionarDominioOnline(){
-
-  echo
-  echo -n " >>> Digite o nome do dominio: "
+  titulo "Adicionar Domínio Online (com SSL)"
+  entrada "Nome do domínio (ex: meusite.com):"
   read dominio
-  echo "============================"
-  echo
-  echo -n " >>> Qual a pasta root dentro projeto: "
+  sep
+  entrada "Pasta root dentro do projeto (ex: /public ou deixe vazio):"
   read path
-  echo "============================"
+  sep
   vhostconf="
   <VirtualHost *:80>\n
       <Directory /var/www/$dominio$path>\n
@@ -832,113 +745,66 @@ AdicionarDominioOnline(){
   </VirtualHost>"
 
 
-  echo "Criando Dominio, aguarde!..."
-  echo "============================"
-  echo
-  echo "Criando Pasta $dominio em WWW"
+  info "Criando pasta /var/www/$dominio..."
   sudo mkdir -p /var/www/$dominio
-  echo "============================"
-  echo
-  echo "Aplicando Permissões na Pasta $dominio"
-  sudo sudo chown -R www-data:www-data /var/www/$dominio
+  sudo chown -R www-data:www-data /var/www/$dominio
   sudo chmod -R 755 /var/www/$dominio
-  echo "============================"
-  echo
-  echo "Criando Html teste na Pasta $dominio"
   sudo echo "Site $dominio – OK!" > /var/www/$dominio/index.html
-  echo "============================"
-  echo
-  echo "Criando Vhost para o dominio $dominio"
+  ok "Pasta criada!"
+  sep
+  info "Criando VirtualHost..."
   sudo echo -e $vhostconf > /etc/apache2/sites-available/$dominio.conf
-  echo "============================"
-  echo
-  echo "Ativando VirtualHost $dominio"
-  ln -s /etc/apache2/sites-available/$dominio.conf /etc/apache2/sites-enabled/
-  echo "============================"
-  echo
-  echo "Ativando o dominio $dominio"
+  ln -s /etc/apache2/sites-available/$dominio.conf /etc/apache2/sites-enabled/ 2>/dev/null
   sudo a2ensite $dominio.conf
-  echo "============================"
-  echo
-  echo "Desativando a configuração padrão"
   sudo a2dissite 000-default.conf
-  echo "============================"
-  echo
-  echo "Reiniciando Apache"
+  ok "VirtualHost criado!"
+  sep
+  info "Reiniciando Apache..."
   sudo systemctl restart apache2
-  echo "Apache Reiniciado com sucesso!"
-  #sudo systemctl status apache2
-  echo "============================"
-  echo
+  ok "Apache reiniciado!"
+  sep
   ipserver="$(hostname -I | awk '{print $1}')"
-  echo "Configurar Arquivo de Hosts Locais"
-  echo "IP Server: $ipserver"
+  info "Configurando /etc/hosts  (IP: $ipserver)..."
   sudo echo -e "127.0.0.1         $dominio www.$dominio" >> /etc/hosts
-#  sudo echo -e "$dominio www.$dominio" >> /var/www/domains.txt
-  echo "Hosts configurado com sucesso!"
-  echo "============================"
-  echo "Preparando para obter certificado SSL"
-  echo "============================"
-  echo
-  echo "Executando ConfigTest"
+  ok "Hosts configurado!"
+  sep
+  info "Executando ConfigTest..."
   sudo apache2ctl configtest
-  echo "ConfigTest Executado!"
-  echo "============================"
-  echo
-  echo "Recarregando configurações do Apache"
+  sep
+  info "Recarregando Apache..."
   sudo systemctl reload apache2
-  echo "Configurações recarregadas com sucesso!"
-  echo "============================"
-  echo
-  echo "Aplicando Rules Ufw"
+  sep
+  info "Aplicando regras UFW..."
   sudo ufw allow 'Apache Full'
   sudo ufw delete allow 'Apache'
-  echo "============================"
-  echo
-  echo "Obtendo Certificado SSL"
-  #sudo certbot -–apache -d $dominio -d www.$dominio
-  #sudo certbot --apache -d $dominio -d www.$dominio
-  sudo certbot run -n --apache --agree-tos -d $dominio,www.$dominio  -m  $email  --redirect
-  echo "============================"
-  echo
-  echo "Verificando a renovação automática do Certbot"
-  echo "============================"
-  echo
+  sep
+  info "Obtendo certificado SSL via Certbot..."
+  sudo certbot run -n --apache --agree-tos -d $dominio,www.$dominio -m $email --redirect
+  sep
+  info "Verificando renovação automática..."
   sudo systemctl status certbot.timer
-  echo "Aplicando renovação automática do Certbot"
-  echo "============================"
   sudo certbot renew --dry-run
-  echo
-  echo "============================"
-  echo "Dominio Adicionado com sucesso e SSL Ativo"
-  echo "============================"
-  echo
-  echo "Reiniciando Apache"
+  sep
+  info "Reiniciando Apache..."
   sudo systemctl restart apache2
-  echo "Apache Reiniciado com sucesso!"
-  echo "============================"
+  linha
+  ok "Domínio adicionado e SSL ativo!"
   echo
-  echo "============================"
-  echo "Link do Dominio (NO-SSL): http://$dominio"
-  echo "Link do Dominio (SSL): https://$dominio"
-  echo "============================"
-  echo
-  echo "Digite enter para voltar ao Menu Principal"
-  read
+  echo -e "  ${NEGRITO}${VERDE_CLARO}  HTTP  ${RESET}  http://$dominio"
+  echo -e "  ${NEGRITO}${VERDE_CLARO}  HTTPS ${RESET}  https://$dominio"
+  linha
+  pausar
   MenuApache
-
 }
 
 AdicionarDominioLocal(){
-
-  echo
-  echo -n " >>> Digite o nome do dominio: "
+  titulo "Adicionar Domínio Local"
+  entrada "Nome do domínio (ex: meusite.local):"
   read dominio
-  echo "============================"
-  echo
-  echo -n " >>> Qual a pasta root dentro projeto: "
+  sep
+  entrada "Pasta root dentro do projeto (ex: /public ou deixe vazio):"
   read path
-  echo "============================"
+  sep
   vhostconf="
   <VirtualHost *:80>\n
       <Directory /var/www/$dominio$path>\n
@@ -955,205 +821,130 @@ AdicionarDominioLocal(){
   </VirtualHost>"
 
 
-  echo "Criando Dominio, aguarde!..."
-  echo "============================"
-  echo
-  echo "Criando Pasta $dominio em WWW"
+  info "Criando pasta /var/www/$dominio..."
   sudo mkdir -p /var/www/$dominio
-  echo "============================"
-  echo
-  echo "Aplicando Permissões na Pasta $dominio"
-  sudo sudo chown -R www-data:www-data /var/www/$dominio
+  sudo chown -R www-data:www-data /var/www/$dominio
   sudo chmod -R 755 /var/www/$dominio
-  echo "============================"
-  echo
-  echo "Criando Html teste na Pasta $dominio"
   sudo echo "Site $dominio – OK!" > /var/www/$dominio/index.html
-  echo "============================"
-  echo
-  echo "Criando Vhost para o dominio $dominio"
+  ok "Pasta criada!"
+  sep
+  info "Criando VirtualHost..."
   sudo echo -e $vhostconf > /etc/apache2/sites-available/$dominio.conf
-  echo "============================"
-  echo
-  echo "Ativando VirtualHost $dominio"
-  ln -s /etc/apache2/sites-available/$dominio.conf /etc/apache2/sites-enabled/
-  echo "============================"
-  echo
-  echo "Ativando o dominio $dominio"
+  ln -s /etc/apache2/sites-available/$dominio.conf /etc/apache2/sites-enabled/ 2>/dev/null
   sudo a2ensite $dominio.conf
-  echo "============================"
-  echo
-  echo "Desativando a configuração padrão"
   sudo a2dissite 000-default.conf
-  echo "============================"
-  echo
-  echo "Reiniciando Apache"
+  ok "VirtualHost criado!"
+  sep
+  info "Reiniciando Apache..."
   sudo systemctl restart apache2
-  echo "Apache Reiniciado com sucesso!"
-  #sudo systemctl status apache2
-  echo "============================"
-  echo
+  ok "Apache reiniciado!"
+  sep
   ipserver="$(hostname -I | awk '{print $1}')"
-  echo "Configurar Arquivo de Hosts Locais"
-  echo "IP Server: $ipserver"
+  info "Configurando /etc/hosts  (IP: $ipserver)..."
   sudo echo -e "$ipserver         $dominio" >> /etc/hosts
-#  sudo echo -e "$dominio www.$dominio" >> /var/www/domains.txt
-  echo "Hosts configurado com sucesso!"
-  echo "============================"
-  echo "Preparando para obter certificado SSL"
-  echo "============================"
-  echo
-  echo "Executando ConfigTest"
+  ok "Hosts configurado!"
+  sep
+  info "Executando ConfigTest..."
   sudo apache2ctl configtest
-  echo "ConfigTest Executado!"
-  echo "============================"
-  echo
-  echo "Recarregando configurações do Apache"
+  sep
+  info "Recarregando Apache..."
   sudo systemctl reload apache2
-  echo "Configurações recarregadas com sucesso!"
-  echo "============================"
-  echo
-  echo "Aplicando Rules Ufw"
+  sep
+  info "Aplicando regras UFW..."
   sudo ufw allow 'Apache Full'
   sudo ufw delete allow 'Apache'
-  echo "============================"
-  echo
-
-  echo -n " >>> Deseja Instalar SSL no Dominio Local? (y ou n): "
+  sep
+  entrada "Deseja instalar SSL no domínio local? (y/n):"
   read obterSSL
-  echo "============================"
-
-  if [[ $obterSSL = "y" ]]; then
-    simObterSSL="ok"
-  elif [[ $obterSSL = "Y" ]]; then
-    simObterSSL="ok"
+  sep
+  if [[ "$obterSSL" == "y" || "$obterSSL" == "Y" ]]; then
+    info "Obtendo certificado SSL via Certbot..."
+    sudo certbot run -n --apache --agree-tos -d $dominio,www.$dominio -m $email --redirect
+    sep
+    info "Verificando renovação automática..."
+    sudo systemctl status certbot.timer
+    sudo certbot renew --dry-run
+    ok "SSL ativo!"
+    sep
   fi
-  if [[ $simObterSSL = "ok" ]]; then
-  echo "Obtendo Certificado SSL"
-  #sudo certbot -–apache -d $dominio -d www.$dominio
-  #sudo certbot --apache -d $dominio -d www.$dominio
-  sudo certbot run -n --apache --agree-tos -d $dominio,www.$dominio  -m  $email  --redirect
-  echo "============================"
-  echo
-  echo "Verificando a renovação automática do Certbot"
-  echo "============================"
-  echo
-  sudo systemctl status certbot.timer
-  echo "Aplicando renovação automática do Certbot"
-  echo "============================"
-  sudo certbot renew --dry-run
-  echo
-  echo "============================"
-  echo "Dominio Adicionado com sucesso e SSL Ativo"
-  echo "============================"
-  echo
-
-  fi
-  echo "Reiniciando Apache"
+  info "Reiniciando Apache..."
   sudo systemctl restart apache2
-  echo "Apache Reiniciado com sucesso!"
-  echo "============================"
+  linha
+  ok "Domínio local adicionado com sucesso!"
   echo
-  echo "============================"
-  echo "Link do Dominio Local: http://$dominio"
-  echo "============================"
-  echo
-  echo "Digite enter para voltar ao Menu Principal"
-  read
+  echo -e "  ${NEGRITO}${VERDE_CLARO}  Local ${RESET}  http://$dominio"
+  linha
+  pausar
   MenuApache
-
 }
 renovar_ssl(){
-  echo
- echo -n " >>> Digite o dominio: "
- read dominio
- echo "============================"
- echo "Verificando a renovação automática do Certbot"
- certbot certonly --force-renew -d $domínio.com
- echo "============================"
- echo "O SSL do dominio $dominio foi renovado com sucesso!"
- echo "============================"
- echo "Digite enter para voltar ao Menu Principal"
-      read
- MenuApache
+  titulo "Renovar Certificado SSL"
+  entrada "Digite o domínio:"
+  read dominio
+  sep
+  info "Renovando SSL para $dominio..."
+  certbot certonly --force-renew -d $dominio
+  ok "SSL do domínio $dominio renovado com sucesso!"
+  linha
+  pausar
+  MenuApache
 }
 RemoveDominio() {
-  echo
-   echo "Digite o nome do dominio que deseja remover(sem o www)"
-   echo "============================"
-   echo
-#   if [ -e /var/www/domains.txt ]; then
-#     hostss=$(cat /var/www/domains.txt)
-#     echo "$hostss"
-#   else
-#     cat /var/www/domains.txt
-#     hostss=$(cat /var/www/domains.txt)
-#     echo "$hostss"
-#   fi
-#   hostss=$(cat /var/www/domains.txt)
-   hostss=$(cat /etc/hosts)
-   echo "$hostss"
-   echo "============================"
-   echo
-   echo -n " >>> Digite apenas nomedodominio.com.br: "
-        read dominio
-        echo "============================"
-        #removendo a pasta onde estao os arquivos, e retirando do apache
-        echo -n " >>> Deseja deletar os arquivos do site (y ou n): "
-        read rmFileSite
-        echo "============================"
-        if [[ $rmFileSite = "y" ]]; then
-          echo "Deletando Arquivos!"
-          rm -fr /var/www/$dominio
-          echo "Arquivos deletados com sucesso!"
-        fi
-        rm /etc/apache2/sites-available/$dominio.conf
-        rm /etc/apache2/sites-available/$dominio-le-ssl.conf
-        rm /etc/apache2/sites-enabled/$dominio.conf
-        rm /etc/apache2/sites-enabled/$dominio-le-ssl.conf
-   #Removendo a linha onde ha o dominio
-   sed -i "/$dominio/d" /etc/hosts
-#  sed -i "/$dominio/d" /var/www/domains.txt
-   logger - WGR MF LOG = NOVO DOMINIO $dominio REMOVIDO
-   echo "============================"
-   echo "Dominio removido com sucesso!"
-   echo "============================"
-   echo
-   echo "Digite enter para voltar ao Menu Principal"
-   read
-   MenuApache
+  titulo "Remover Domínio"
+  info "Hosts configurados:"
+  sep
+  cat /etc/hosts
+  linha
+  entrada "Digite o domínio a remover (ex: meusite.com.br):"
+  read dominio
+  sep
+  entrada "Deseja deletar os arquivos do site em /var/www/$dominio? (y/n):"
+  read rmFileSite
+  sep
+  if [[ "$rmFileSite" == "y" || "$rmFileSite" == "Y" ]]; then
+    info "Deletando arquivos de /var/www/$dominio..."
+    rm -fr /var/www/$dominio
+    ok "Arquivos deletados!"
+  fi
+  info "Removendo configurações do Apache..."
+  rm -f /etc/apache2/sites-available/$dominio.conf
+  rm -f /etc/apache2/sites-available/$dominio-le-ssl.conf
+  rm -f /etc/apache2/sites-enabled/$dominio.conf
+  rm -f /etc/apache2/sites-enabled/$dominio-le-ssl.conf
+  sed -i "/$dominio/d" /etc/hosts
+  logger - WGR MF LOG = NOVO DOMINIO $dominio REMOVIDO
+  ok "Domínio $dominio removido com sucesso!"
+  linha
+  pausar
+  MenuApache
 }
 AplicarPermissoes(){
-  echo
-     echo -n " >>> Digite apenas nomedodominio.com.br: "
-     read dominio
-     echo "============================"
-     sudo chown -R www-data:www-data /var/www
-     sudo chown -R www-data:www-data /var/www/$dominio/*
-     logger - WGR MF LOG = PERMISSOES APLICADA AO DOMINIO $dominio
-     echo
-     echo "============================"
-     echo "Permissões aplicadas ao dominio $dominio"
-     echo "============================"
-     echo
-     echo "Digite enter para voltar ao Menu Principal"
-     read
-     MenuApache
+  titulo "Aplicar Permissões em Domínio"
+  entrada "Digite o domínio (ex: meusite.com.br):"
+  read dominio
+  sep
+  info "Aplicando permissões em /var/www/$dominio..."
+  sudo chown -R www-data:www-data /var/www
+  sudo chown -R www-data:www-data /var/www/$dominio/*
+  logger - WGR MF LOG = PERMISSOES APLICADA AO DOMINIO $dominio
+  ok "Permissões aplicadas ao domínio $dominio!"
+  linha
+  pausar
+  MenuApache
 }
 VerificaApache() {
-  echo
- echo "Carregando Informacoes.....aguarde...."
-      result=$(nmap -A 127.0.0.1| grep 80)
-      echo "$result"
-      logger - WGR MF LOG = Status do Apache = $result
- echo "Digite enter para voltar ao Menu Principal"
-      read
- MenuApache
+  titulo "Status do Apache"
+  info "Verificando porta 80 via NMAP..."
+  result=$(nmap -A 127.0.0.1 | grep 80)
+  echo -e "  ${BRANCO}$result${RESET}"
+  logger - WGR MF LOG = Status do Apache = $result
+  linha
+  pausar
+  MenuApache
 }
 RedefinirConfigApache(){
-  echo
-  echo "Redefinindo configurações do Apache!..."
-  echo
+  titulo "Redefinir Configuração do Apache"
+  info "Reescrevendo dir.conf..."
   dirConf="
   <IfModule mod_dir.c>\n
        DirectoryIndex index.php index.html index.cgi index.pl index.php index.xhtml index.htm\n
@@ -1161,467 +952,340 @@ RedefinirConfigApache(){
    # vim: syntax=apache ts=4 sw=4 sts=4 sr noet\n"
   sudo echo -e $dirConf > /etc/apache2/mods-enabled/dir.conf
   sudo chown -R www-data:www-data /var/www
-  echo "============================"
-  echo
-  echo "Reiniciando Apache"
+  sep
+  info "Reiniciando Apache..."
   sudo systemctl restart apache2
-  echo "Apache Reiniciado com sucesso!"
-  echo "============================"
-  echo
-  echo "Digite enter para voltar ao Menu Principal"
-  read
+  ok "Apache reiniciado com sucesso!"
+  linha
+  pausar
   MenuApache
 }
 ClonarSite(){
-  echo
-  hostss=$(cat /etc/hosts)
-  echo "$hostss"
-  echo -n " >>> Digite o dominio a ser clonado: "
-  read origem
-  echo "============================"
-  dominioorigem="$origem"
-  echo -n " >>> Digite o dominio de destino: "
-  read destino
-  echo "============================"
-  dominiodestino="$destino"
+  titulo "Clonar Site"
+  cat /etc/hosts
+  sep
+  entrada "Domínio de origem:"
+  read dominioorigem
+  sep
+  entrada "Domínio de destino:"
+  read dominiodestino
+  sep
+  info "Clonando /var/www/$dominioorigem → /var/www/$dominiodestino..."
   sudo rm -rf /var/www/$dominiodestino/
-  sudo cp -p -R  -v  /var/www/$dominioorigem/ /var/www/$dominiodestino/
+  sudo cp -p -R -v /var/www/$dominioorigem/ /var/www/$dominiodestino/
   sudo chown -R www-data:www-data /var/www/$dominiodestino/*
   logger - WGR MF LOG = DOMINIO CLONADO DE $dominioorigem PARA $dominiodestino
-  echo
-  echo "============================"
-  echo "Arquivos Clonado para /var/www/$dominiodestino"
-  echo "============================"
-  echo
-  echo "Digite enter para voltar ao Menu Principal"
-  read
+  ok "Arquivos clonados para /var/www/$dominiodestino!"
+  linha
+  pausar
   MenuApache
 }
 LimparSite(){
-  echo
-  hostss=$(cat /etc/hosts)
-  echo "$hostss"
-  echo -n " >>> Digite o dominio a ser limpo: "
+  titulo "Limpar Arquivos do Site"
+  cat /etc/hosts
+  sep
+  entrada "Domínio a ser limpo:"
   read dominio
-  echo "============================"
-  echo
-  echo "Esvaziando pasta /var/www/$dominio"
-  echo "============================"
-  echo
-  sudo rm -rf /var/www/$dominio/*
-  logger - WGR MF LOG = PASTA DO DOMINIO $dominio FOI ESVAZIADA
-  echo
-  echo "============================"
-  echo "A pasta /var/www/$dominio foi esvaziada"
-  echo "============================"
-  echo
-  echo "Digite enter para voltar ao Menu Principal"
-  read
+  sep
+  aviso "Todos os arquivos em /var/www/$dominio serão apagados!"
+  entrada "Confirmar? (y/n):"
+  read confirm
+  sep
+  if [[ "$confirm" == "y" || "$confirm" == "Y" ]]; then
+    sudo rm -rf /var/www/$dominio/*
+    logger - WGR MF LOG = PASTA DO DOMINIO $dominio FOI ESVAZIADA
+    ok "Pasta /var/www/$dominio esvaziada!"
+  else
+    aviso "Operação cancelada."
+  fi
+  linha
+  pausar
   MenuApache
 }
 ListarDominios(){
-  echo
-  echo "============================"
-  echo "  Lista de Dominios Ativos  "
-  echo "============================"
-  echo
-  hostss=$(cat /etc/hosts)
-  echo "$hostss"
-  echo
-  echo "=========================================="
-  echo
-  echo "Digite enter para voltar ao Menu Principal"
-  read
+  titulo "Domínios Ativos (/etc/hosts)"
+  cat /etc/hosts
+  linha
+  pausar
   MenuApache
 }
 InstalarComposer(){
-  echo
-  echo "Instalando o Composer...  "
-  echo "============================"
-  echo
+  titulo "Instalar Composer"
+  info "Baixando e instalando Composer..."
   sudo curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
-  echo
-  if [ -e "/usr/local/bin/composer" ] ; then
-  echo "============================"
-  echo "  Composer Instalado com sucesso!  "
-  echo "============================"
+  sep
+  if [ -e "/usr/local/bin/composer" ]; then
+    ok "Composer instalado com sucesso!"
   else
-  echo "============================"
-  echo "  Falha ao instalar o composer!  "
-  echo "============================"
+    erro "Falha ao instalar o Composer!"
   fi
-  echo
-  echo "=========================================="
-  echo
-  echo "Digite enter para voltar ao Menu Principal"
-  read
+  linha
+  pausar
   Menu
 }
 InstalarNVM(){
-  echo
-  echo "Instalando o NVM...  "
-  echo "============================"
-  echo
+  titulo "Instalar NVM (Node Version Manager)"
+  info "Baixando e instalando NVM v0.34.0..."
   curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.34.0/install.sh | bash
   export NVM_DIR="$([ -z "${XDG_CONFIG_HOME-}" ] && printf %s "${HOME}/.nvm" || printf %s "${XDG_CONFIG_HOME}/nvm")"
-  [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh" # This loads nvm
+  [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
   source $HOME/.bashrc
-  echo
-  echo "============================"
-  echo " NVM Instalado com sucesso!  "
-  echo "============================"
-  echo
-  echo "=========================================="
-  echo
-  echo "Digite enter para voltar ao Menu Principal"
-  read
+  ok "NVM instalado com sucesso!"
+  linha
+  pausar
   MenuNode
 }
 InstalarNodeUltimaVersao(){
-  echo
-  echo "Instalando última versão do NODE...  "
-  echo "===================================="
-  echo
+  titulo "Instalar Última Versão do Node"
+  info "Instalando Node (versão mais recente)..."
   nvm install node
-  echo
-  echo "=========================================="
-  echo
-  echo "Digite enter para voltar ao Menu Principal"
-  read
+  ok "Node instalado!"
+  linha
+  pausar
   MenuNode
 }
 InstalarNodeOutraVersao(){
-  echo
-  echo -n " >>> Informe a versão desejada do NODE (Ex: 18.14.2): "
+  titulo "Instalar Versão Específica do Node"
+  entrada "Informe a versão desejada (Ex: 18.14.2):"
   read vNode
-  echo "===================================="
-  echo
-  echo "Instalando versão do NODE...  "
+  sep
+  info "Instalando Node v$vNode..."
   nvm install v$vNode
-  echo "===================================="
-  echo
-  echo "Digite enter para voltar ao Menu Principal"
-  read
+  ok "Node v$vNode instalado!"
+  linha
+  pausar
   MenuNode
 }
 InstalarVersaoNodeNativo(){
-  echo
-  echo "Atualizando Repositórios do Linux!..."
+  titulo "Instalar Node (Repositório Nativo)"
+  info "Atualizando repositórios..."
   sudo apt update
-  echo "============================"
-  echo 
-  echo "Instalando o NODE...  "
+  sep
+  info "Instalando Node.js..."
   sudo apt install -y nodejs
-  echo "============================"
-  echo 
-  echo "Instalando o NODE...  "
+  sep
+  info "Instalando NPM..."
   sudo apt install -y npm
-  echo 
-  echo "===================================="
-  echo
-  echo "Digite enter para voltar ao Menu Principal"
-  read
+  ok "Node e NPM instalados!"
+  linha
+  pausar
   MenuNode
 }
 ListarVersoesNodeInstaladas(){
-  
-  echo
-  echo "====================================="
-  echo " Lista de versões do NODE Instaladas "
-  echo "====================================="
-  echo
+  titulo "Versões do Node Instaladas"
   nvm ls
-  echo
-  echo "=========================================="
-  echo
-  echo "Digite enter para voltar ao Menu Principal"
-  read
+  linha
+  pausar
   MenuNode
 }
 ListarVersoesNodeParaInstalacao(){
-  
-  echo
-  echo "======================================================"
-  echo " Lista de versões do NODE disponiveis para instalação "
-  echo "======================================================"
-  echo
+  titulo "Versões do Node Disponíveis"
   nvm ls-remote
-  echo
-  echo "=========================================="
-  echo
-  echo "Digite enter para voltar ao Menu Principal"
-  read
+  linha
+  pausar
   MenuNode
 }
 UsarOutraVersaoNode(){
-  echo
-  echo -n " >>> Informe a versão desejada do NODE (Ex: 18.14.2): "
+  titulo "Habilitar Versão do Node"
+  entrada "Informe a versão desejada (Ex: 18.14.2):"
   read vNode
-  echo "===================================="
-  echo
-  echo "Habilitando versão do NODE...  "
+  sep
+  info "Habilitando Node v$vNode..."
   nvm use v$vNode
-  echo "===================================="
-  echo
-  echo "Digite enter para voltar ao Menu Principal"
-  read
+  ok "Node v$vNode habilitado!"
+  linha
+  pausar
   MenuNode
 }
 UsarUltimaVersaoNode(){
-  echo 
-  echo "Habilitando versão mais recente do  do NODE...  "
-  sudo nvm use node
-  echo "===================================="
-  echo
-  echo "Digite enter para voltar ao Menu Principal"
-  read
+  titulo "Habilitar Última Versão do Node"
+  info "Habilitando versão mais recente..."
+  nvm use node
+  ok "Versão mais recente habilitada!"
+  linha
+  pausar
   MenuNode
 }
 DesinstalarNode(){
-  echo
-  echo -n " >>> Informe a versão do NODE que deseja desinstalar (Ex: 18.14.2): "
+  titulo "Desinstalar Versão do Node"
+  entrada "Informe a versão a desinstalar (Ex: 18.14.2):"
   read vNode
-  echo "===================================="
-  echo
-  echo "Desinstalando versão do NODE...  "
+  sep
+  info "Desinstalando Node v$vNode..."
   nvm uninstall v$vNode
-  echo "===================================="
-  echo
-  echo "Digite enter para voltar ao Menu Principal"
-  read
+  ok "Node v$vNode removido!"
+  linha
+  pausar
   MenuNode
 }
 VersaoAtivaDoNode(){
-  
-  echo
-  echo "========================================"
-  echo " Versão Habilitada para uso no terminal "
-  echo "========================================"
-  echo
+  titulo "Versão Ativa do Node (NVM)"
   nvm current
-  echo
-  echo "=========================================="
-  echo
-  echo "Digite enter para voltar ao Menu Principal"
-  read
+  linha
+  pausar
   MenuNode
 }
 VersaoAtivaDoNodeNativo(){
-  
-  echo
-  echo "========================================"
-  echo
-  echo " Versão Habilitada para uso no terminal "
-  echo
-  NODE=$(node -v)
-  NPM=$(npm -v)
-  echo -n " Node: $NODE | NPM: v$NPM"
-  echo
-  echo
-  echo "=========================================="
-  echo
-  echo "Digite enter para voltar ao Menu Principal"
-  read
+  titulo "Versão do Node (Nativo)"
+  NODE=$(node -v 2>/dev/null || echo "não instalado")
+  NPM=$(npm -v 2>/dev/null || echo "não instalado")
+  item "Node:  $NODE"
+  item "NPM:   v$NPM"
+  linha
+  pausar
   MenuNode
 }
 
 ClonarRepositorioGit(){
-    echo
-    echo -n " >>> Digite o nome do dominio (sem http://): "
-    read dominio
-    sudo rm -R /var/www/$dominio/*
-    echo "===================================="
-    echo
-    echo -n " >>> Insira o link do repositório git: "
-    read repositorio
-    echo "===================================="
-    echo
-    echo -n " >>> Qual a branch: "
-    read branch
-    echo "===================================="
-    echo
-    if [[ -z "$branch" ]]; then
-      git clone $repositorio /var/www/$dominio
-    else
-      git clone -b $branch $repositorio /var/www/$dominio
-    fi
-    echo
-    echo "===================================="
-    echo
-    echo "Repositório clonado com sucesso...  "
-    echo
-    echo "===================================="
-    echo
-    cd "/var/www/$dominio/"
-    echo "===================================="
-    echo
-    echo "Rodando o composer...  "
-    composer install
-    echo
-    echo "===================================="
-    echo "===================================="
-    echo
-    echo "Rodando o npm...  "
-    npm install
-    echo
-    echo "===================================="
-    echo
-    echo "Digite enter para voltar ao Menu Principal"
-    read
-    Menu
+  titulo "Clonar Repositório Git"
+  entrada "Nome do domínio (sem http://):"
+  read dominio
+  sep
+  entrada "URL do repositório Git:"
+  read repositorio
+  sep
+  entrada "Branch (deixe vazio para padrão):"
+  read branch
+  sep
+  info "Limpando /var/www/$dominio..."
+  sudo rm -R /var/www/$dominio/* 2>/dev/null
+  sep
+  info "Clonando repositório..."
+  if [[ -z "$branch" ]]; then
+    git clone $repositorio /var/www/$dominio
+  else
+    git clone -b $branch $repositorio /var/www/$dominio
+  fi
+  ok "Repositório clonado!"
+  sep
+  cd "/var/www/$dominio/"
+  info "Rodando composer install..."
+  composer install
+  sep
+  info "Rodando npm install..."
+  npm install
+  ok "Dependências instaladas!"
+  linha
+  pausar
+  Menu
 }
 
 VerLogsErroApache(){
-  echo
-  echo "============================"
-  echo "   Últimas 50 linhas do Log de Erros do Apache   "
-  echo "============================"
+  titulo "Log de Erros do Apache (últimas 50 linhas)"
   sudo tail -n 50 /var/log/apache2/error.log
-  echo "============================"
-  echo
-  echo "Digite enter para voltar ao Menu"
-  read
+  linha
+  pausar
   MenuApache
 }
 VerLogsAcessoApache(){
-  echo
-  echo "============================"
-  echo "   Últimas 50 linhas do Log de Acesso do Apache   "
-  echo "============================"
+  titulo "Log de Acesso do Apache (últimas 50 linhas)"
   sudo tail -n 50 /var/log/apache2/access.log
-  echo "============================"
-  echo
-  echo "Digite enter para voltar ao Menu"
-  read
+  linha
+  pausar
   MenuApache
 }
 VerLogsDominio(){
-  echo
-  hostss=$(cat /etc/hosts)
-  echo "$hostss"
-  echo "============================"
-  echo -n " >>> Digite o dominio: "
+  titulo "Logs de Domínio"
+  cat /etc/hosts
+  sep
+  entrada "Digite o domínio:"
   read dominio
-  echo "============================"
-  echo
-  echo "--- Log de Erros: $dominio ---"
+  sep
+  info "Exibindo log de erros de $dominio..."
   if [ -f "/var/log/apache2/$dominio-error.log" ]; then
     sudo tail -n 50 /var/log/apache2/$dominio-error.log
   else
     sudo tail -n 50 /var/log/apache2/error.log
   fi
-  echo "============================"
-  echo
-  echo "Digite enter para voltar ao Menu"
-  read
+  linha
+  pausar
   MenuApache
 }
 BackupSite(){
-  echo
-  hostss=$(cat /etc/hosts)
-  echo "$hostss"
-  echo "============================"
-  echo -n " >>> Digite o dominio a ser salvo no backup: "
+  titulo "Backup de Site"
+  cat /etc/hosts
+  sep
+  entrada "Domínio a salvar:"
   read dominio
-  echo "============================"
+  sep
   timestamp=$(date +"%Y%m%d_%H%M%S")
   backupfile="/var/backups/${dominio}_${timestamp}.tar.gz"
-  echo
-  echo "Criando backup de /var/www/$dominio !..."
+  info "Criando backup de /var/www/$dominio..."
   sudo mkdir -p /var/backups
   sudo tar -czf $backupfile /var/www/$dominio 2>/dev/null
-  echo "============================"
-  echo
+  sep
   if [ -f "$backupfile" ]; then
     tamanho=$(du -sh $backupfile | awk '{print $1}')
-    echo " Backup criado com sucesso!"
-    echo " Arquivo: $backupfile"
-    echo " Tamanho: $tamanho"
+    ok "Backup criado com sucesso!"
+    item "Arquivo: $backupfile"
+    item "Tamanho: $tamanho"
   else
-    echo " Falha ao criar o backup!"
+    erro "Falha ao criar o backup!"
   fi
-  echo "============================"
-  echo
-  echo "Digite enter para voltar ao Menu"
-  read
+  linha
+  pausar
   MenuApache
 }
 RestaurarBackupSite(){
-  echo
-  echo "============================"
-  echo "  Backups disponíveis em /var/backups  "
-  echo "============================"
-  ls /var/backups/*.tar.gz 2>/dev/null || echo "Nenhum backup encontrado."
-  echo "============================"
-  echo
-  echo -n " >>> Digite o caminho completo do arquivo de backup: "
+  titulo "Restaurar Backup de Site"
+  info "Backups disponíveis em /var/backups:"
+  sep
+  ls /var/backups/*.tar.gz 2>/dev/null || aviso "Nenhum backup encontrado."
+  sep
+  entrada "Caminho completo do arquivo de backup:"
   read backupfile
-  echo "============================"
-  echo -n " >>> Digite o dominio de destino (será restaurado em /var/www/dominio): "
+  sep
+  entrada "Domínio de destino:"
   read dominio
-  echo "============================"
-  echo
-  echo "Restaurando backup para /var/www/$dominio !..."
+  sep
+  info "Restaurando backup para /var/www/$dominio..."
   sudo mkdir -p /var/www/$dominio
   sudo tar -xzf $backupfile -C /var/www/$dominio --strip-components=3 2>/dev/null
   sudo chown -R www-data:www-data /var/www/$dominio
-  echo "============================"
-  echo " Backup restaurado em /var/www/$dominio!"
-  echo "============================"
-  echo
-  echo "Digite enter para voltar ao Menu"
-  read
+  ok "Backup restaurado em /var/www/$dominio!"
+  linha
+  pausar
   MenuApache
 }
 ListarBackups(){
-  echo
-  echo "============================"
-  echo "  Backups disponíveis em /var/backups  "
-  echo "============================"
+  titulo "Backups Disponíveis"
   if ls /var/backups/*.tar.gz 2>/dev/null; then
-    echo
+    sep
     du -sh /var/backups/*.tar.gz 2>/dev/null
   else
-    echo "Nenhum backup encontrado."
+    aviso "Nenhum backup encontrado em /var/backups."
   fi
-  echo "============================"
-  echo
-  echo "Digite enter para voltar ao Menu"
-  read
+  linha
+  pausar
   MenuApache
 }
 
 Sair() {
-   echo
-   echo " Finalizando..."
-   echo
-   echo
-   clear
-   exit
+  clear
+  echo
+  echo -e "  ${CIANO_CLARO}Até logo!${RESET}"
+  echo
+  exit
 }
 MenuNode(){
-  clear
-  echo "==============================================="
-  echo "||    NODE DEVELOPMENT DOUGLAS S. SANTOS     ||"
-  echo "==============================================="
+  cabecalho "NODE.JS" "Douglas S. Santos"
+  opcao_menu  1 "Instalar Node Version Manager (NVM)"
+  opcao_menu  2 "Instalar Node (Repositório Nativo)"
+  opcao_menu  3 "Instalar última versão do Node"
+  opcao_menu  4 "Instalar outra versão do Node"
+  opcao_menu  5 "Versões do Node disponíveis (NVM)"
+  opcao_menu  6 "Versões do Node instaladas"
+  opcao_menu  7 "Habilitar última versão do Node"
+  opcao_menu  8 "Habilitar outra versão do Node"
+  opcao_menu  9 "Versão ativa do Node (NVM)"
+  opcao_menu 10 "Versão ativa do Node (Nativo)"
+  opcao_menu 11 "Desinstalar versão do Node"
   echo
-  echo "Escolha uma funcao ou 0 para sair"
-  echo " [1] Instalar Node Version Manager (NVM)"
-  echo " [2] Instalar do NODE Repo Nativo"
-  echo " [3] Instalar última versão do NODE"
-  echo " [4] Instalar outra versão do NODE"
-  echo " [5] Lista de versões do NODE disponiveis para instalação"
-  echo " [6] Lista de versões do NODE Instaladas"
-  echo " [7] Habilitar última versão do NODE"
-  echo " [8] Habilitar outra versão do NODE"
-  echo " [9] Mostrar Versão do NODE habilitada para uso"
-  echo " [10] Mostrar Versão do NODE REPO Nativo habilitada para uso"
-  echo " [11] Desinstalar versões do NODE"
-  echo " [0] Sair "
+  opcao_menu  0 "Voltar ao Menu Principal"
   echo
-  echo -n " >>> Digite a Opcao: "
+  entrada "Escolha uma opção:"
   read opcao
-  echo "==============================================="
+  linha
   case $opcao in
     1) InstalarNVM;;
     2) InstalarVersaoNodeNativo;;
@@ -1635,31 +1299,27 @@ MenuNode(){
     10) VersaoAtivaDoNodeNativo;;
     11) DesinstalarNode;;
     0) Menu;;
-    *) echo "Opcao Invalida!" ; echo ; MenuNode ;;
+    *) erro "Opção inválida!" ; sleep 1 ; MenuNode ;;
   esac
 }
 
 MenuRedis(){
-  clear
-  echo "==============================================="
-  echo "||    REDIS DEVELOPMENT DOUGLAS S. SANTOS    ||"
-  echo "==============================================="
+  cabecalho "REDIS" "Douglas S. Santos"
+  opcao_menu 1 "Instalar Redis"
+  opcao_menu 2 "Desinstalar Redis"
+  opcao_menu 3 "Iniciar Redis"
+  opcao_menu 4 "Parar Redis"
+  opcao_menu 5 "Reiniciar Redis"
+  opcao_menu 6 "Status do Redis"
+  opcao_menu 7 "Informações do Redis"
+  opcao_menu 8 "Testar Conexão"
+  opcao_menu 9 "Limpar Cache"
   echo
-  echo "Escolha uma funcao ou 0 para sair"
-  echo " [1] Instalar Redis"
-  echo " [2] Desinstalar Redis"
-  echo " [3] Iniciar Redis"
-  echo " [4] Parar Redis"
-  echo " [5] Reiniciar Redis"
-  echo " [6] Status do Redis"
-  echo " [7] Informações do Redis"
-  echo " [8] Testar Conexão"
-  echo " [9] Limpar Cache"
-  echo " [0] Voltar ao Menu Principal"
+  opcao_menu 0 "Voltar ao Menu Principal"
   echo
-  echo -n " >>> Digite a Opcao: "
+  entrada "Escolha uma opção:"
   read opcao
-  echo "==============================================="
+  linha
   case $opcao in
     1) InstalarRedis;;
     2) DesinstalarRedis;;
@@ -1671,35 +1331,31 @@ MenuRedis(){
     8) TestarRedis;;
     9) LimparCacheRedis;;
     0) Menu;;
-    *) echo "Opcao Invalida!" ; echo ; MenuRedis ;;
+    *) erro "Opção inválida!" ; sleep 1 ; MenuRedis ;;
   esac
 }
 
 MenuPostgres(){
-  clear
-  echo "==============================================="
-  echo "||  POSTGRES DEVELOPMENT DOUGLAS S. SANTOS  ||"
-  echo "==============================================="
+  cabecalho "POSTGRESQL" "Douglas S. Santos"
+  opcao_menu  1 "Instalar PostgreSQL"
+  opcao_menu  2 "Desinstalar PostgreSQL"
+  opcao_menu  3 "Iniciar PostgreSQL"
+  opcao_menu  4 "Parar PostgreSQL"
+  opcao_menu  5 "Reiniciar PostgreSQL"
+  opcao_menu  6 "Status do PostgreSQL"
+  opcao_menu  7 "Criar Usuário"
+  opcao_menu  8 "Deletar Usuário"
+  opcao_menu  9 "Criar Banco de Dados"
+  opcao_menu 10 "Deletar Banco de Dados"
+  opcao_menu 11 "Listar Bancos de Dados"
+  opcao_menu 12 "Backup de Banco"
+  opcao_menu 13 "Restaurar Banco"
   echo
-  echo "Escolha uma funcao ou 0 para sair"
-  echo " [1]  Instalar PostgreSQL"
-  echo " [2]  Desinstalar PostgreSQL"
-  echo " [3]  Iniciar PostgreSQL"
-  echo " [4]  Parar PostgreSQL"
-  echo " [5]  Reiniciar PostgreSQL"
-  echo " [6]  Status do PostgreSQL"
-  echo " [7]  Criar Usuário"
-  echo " [8]  Deletar Usuário"
-  echo " [9]  Criar Banco de Dados"
-  echo " [10] Deletar Banco de Dados"
-  echo " [11] Listar Bancos de Dados"
-  echo " [12] Backup de Banco"
-  echo " [13] Restaurar Banco"
-  echo " [0]  Voltar ao Menu Principal"
+  opcao_menu  0 "Voltar ao Menu Principal"
   echo
-  echo -n " >>> Digite a Opcao: "
+  entrada "Escolha uma opção:"
   read opcao
-  echo "==============================================="
+  linha
   case $opcao in
     1) InstalarPostgres;;
     2) DesinstalarPostgres;;
@@ -1715,27 +1371,23 @@ MenuPostgres(){
     12) BackupBancoPostgres;;
     13) RestaurarBancoPostgres;;
     0) Menu;;
-    *) echo "Opcao Invalida!" ; echo ; MenuPostgres ;;
+    *) erro "Opção inválida!" ; sleep 1 ; MenuPostgres ;;
   esac
 }
 
 MenuSistema(){
-  clear
-  echo "==============================================="
-  echo "||    SISTEMA  — DOUGLAS S. SANTOS           ||"
-  echo "==============================================="
+  cabecalho "SISTEMA" "Douglas S. Santos"
+  opcao_menu 1 "Informações do Servidor"
+  opcao_menu 2 "Status dos Serviços (Apache / PostgreSQL / Redis)"
+  opcao_menu 3 "Atualizar Sistema"
+  opcao_menu 4 "Portas em Uso"
+  opcao_menu 5 "Limpar Logs do Apache"
   echo
-  echo "Escolha uma funcao ou 0 para sair"
-  echo " [1] Informações do Servidor"
-  echo " [2] Status dos Serviços (Apache / PostgreSQL / Redis)"
-  echo " [3] Atualizar Sistema"
-  echo " [4] Portas em Uso"
-  echo " [5] Limpar Logs do Apache"
-  echo " [0] Voltar ao Menu Principal"
+  opcao_menu 0 "Voltar ao Menu Principal"
   echo
-  echo -n " >>> Digite a Opcao: "
+  entrada "Escolha uma opção:"
   read opcao
-  echo "==============================================="
+  linha
   case $opcao in
     1) InformacoesServidor;;
     2) VerServicosAtivos;;
@@ -1743,29 +1395,25 @@ MenuSistema(){
     4) VerPortasEmUso;;
     5) LimparLogsSistema;;
     0) Menu;;
-    *) echo "Opcao Invalida!" ; echo ; MenuSistema ;;
+    *) erro "Opção inválida!" ; sleep 1 ; MenuSistema ;;
   esac
 }
 
 MenuPHP(){
-  clear
-  echo "==============================================="
-  echo "||    PHP DEVELOPMENT DOUGLAS S. SANTOS     ||"
-  echo "==============================================="
+  cabecalho "PHP" "Douglas S. Santos"
+  opcao_menu 1 "Instalar versão atual do PHP"
+  opcao_menu 2 "Instalar outra versão do PHP"
+  opcao_menu 3 "Listar versões do PHP instaladas"
+  opcao_menu 4 "Habilitar outra versão do PHP"
+  opcao_menu 5 "Desinstalar versão do PHP"
+  opcao_menu 6 "Adicionar repositório PPA (ondrej/php)"
+  opcao_menu 7 "Configurar php.ini"
   echo
-  echo "Escolha uma funcao ou 0 para sair"
-  echo " [1] Instalar última versão do PHP"
-  echo " [2] Instalar outra versão do PHP"
-  echo " [3] Listar Versões do PHP Instaladas"
-  echo " [4] Habilitar outra versão do PHP"
-  echo " [5] Desinstalar versões do PHP"
-  echo " [6] Instalar Repositório/PPA do PHP"
-  echo " [7] Configurar php.ini (limites de upload/memória/tempo)"
-  echo " [0] Sair "
+  opcao_menu 0 "Voltar ao Menu Principal"
   echo
-  echo -n " >>> Digite a Opcao: "
+  entrada "Escolha uma opção:"
   read opcao
-  echo "==============================================="
+  linha
   case $opcao in
     1) InstalarUltimaVersaoPhp;;
     2) InstalarVersaoPhp;;
@@ -1775,39 +1423,39 @@ MenuPHP(){
     6) adicionarRepoPhp;;
     7) ConfigurarPhpIni;;
     0) Menu;;
-    *) echo "Opcao Invalida!" ; echo ; MenuPHP ;;
+    *) erro "Opção inválida!" ; sleep 1 ; MenuPHP ;;
   esac
 }
 MenuApache(){
-  clear
-  echo "==============================================="
-  echo "||    LAMP DEVELOPMENT DOUGLAS S. SANTOS     ||"
-  echo "==============================================="
+  cabecalho "APACHE / LAMP" "Douglas S. Santos"
+  opcao_menu  1 "Instalar o LAMP"
+  opcao_menu  2 "Desinstalar o LAMP"
+  sep
+  opcao_menu  3 "Adicionar Domínio Online (com SSL)"
+  opcao_menu  4 "Adicionar Domínio Local"
+  opcao_menu  5 "Remover Domínio"
+  opcao_menu  6 "Aplicar Permissões em Domínio"
+  opcao_menu  7 "Renovar SSL"
+  opcao_menu  8 "Verificar Status do Apache"
+  opcao_menu  9 "Redefinir Config do Apache"
+  sep
+  opcao_menu 10 "Clonar Site"
+  opcao_menu 11 "Limpar Site"
+  opcao_menu 12 "Listar Domínios Ativos"
+  sep
+  opcao_menu 13 "Backup de Site"
+  opcao_menu 14 "Restaurar Backup de Site"
+  opcao_menu 15 "Listar Backups"
+  sep
+  opcao_menu 16 "Ver Log de Erros do Apache"
+  opcao_menu 17 "Ver Log de Acesso do Apache"
+  opcao_menu 18 "Ver Logs de um Domínio"
   echo
-  echo "Escolha uma funcao ou 0 para sair"
-  echo " [1]  Instalar o LAMP"
-  echo " [2]  Desinstalar o LAMP"
-  echo " [3]  Adicionar Dominio Online ao vHost do Apache"
-  echo " [4]  Adicionar Dominio Local ao vHost do Apache"
-  echo " [5]  Remover Dominio do vHost do Apache"
-  echo " [6]  Aplicar Permissões em Dominio Virtual do Apache"
-  echo " [7]  Renovar SSL"
-  echo " [8]  Verificar Status do Apache"
-  echo " [9]  Redefinir Config do Apache"
-  echo " [10] Clonar Site"
-  echo " [11] Limpar Site"
-  echo " [12] Lista de Dominios Ativos"
-  echo " [13] Backup de Site"
-  echo " [14] Restaurar Backup de Site"
-  echo " [15] Listar Backups"
-  echo " [16] Ver Log de Erros do Apache"
-  echo " [17] Ver Log de Acesso do Apache"
-  echo " [18] Ver Logs de um Dominio"
-  echo " [0]  Sair"
+  opcao_menu  0 "Voltar ao Menu Principal"
   echo
-  echo -n " >>> Digite a Opcao: "
+  entrada "Escolha uma opção:"
   read opcao
-  echo "==============================================="
+  linha
   case $opcao in
     1) InstalarLamp;;
     2) DesinstalarLamp;;
@@ -1828,29 +1476,26 @@ MenuApache(){
     17) VerLogsAcessoApache;;
     18) VerLogsDominio;;
     0) Menu;;
-    *) echo "Opcao Invalida!" ; echo ; MenuApache ;;
+    *) erro "Opção inválida!" ; sleep 1 ; MenuApache ;;
   esac
 }
 Menu(){
-  clear
-  echo "==============================================="
-  echo "||    REPO DEVELOPMENT DOUGLAS S. SANTOS     ||"
-  echo "==============================================="
+  cabecalho "LAMP RESOURCES" "Douglas S. Santos  •  douglassantos2127@gmail.com"
+  opcao_menu 1 "Apache / LAMP"
+  opcao_menu 2 "PHP"
+  opcao_menu 3 "Node.js"
+  opcao_menu 4 "PostgreSQL"
+  opcao_menu 5 "Redis"
+  opcao_menu 6 "Sistema"
+  sep
+  opcao_menu 7 "Instalar Composer"
+  opcao_menu 8 "Clonar Repositório Git"
   echo
-  echo "Escolha uma funcao ou 0 para sair"
-  echo " [1] APACHE / LAMP"
-  echo " [2] PHP"
-  echo " [3] NODE"
-  echo " [4] POSTGRESQL"
-  echo " [5] REDIS"
-  echo " [6] SISTEMA"
-  echo " [7] Instalar Composer"
-  echo " [8] Clonar Repositório Git"
-  echo " [0] Sair"
+  opcao_menu 0 "Sair"
   echo
-  echo -n " >>> Digite a Opcao: "
+  entrada "Escolha uma opção:"
   read opcao
-  echo "==============================================="
+  linha
   case $opcao in
     1) MenuApache;;
     2) MenuPHP;;
@@ -1861,7 +1506,7 @@ Menu(){
     7) InstalarComposer;;
     8) ClonarRepositorioGit;;
     0) Sair;;
-    *) echo "Opcao Invalida!" ; echo ; Menu ;;
+    *) erro "Opção inválida!" ; sleep 1 ; Menu ;;
   esac
 }
 Menu
