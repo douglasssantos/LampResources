@@ -3,32 +3,167 @@
 # Created by: Douglas S. Santos
 # E-mail: douglassantos2127@gmail.com
 # whatsapp: +55 21 97553-3534
-clear
-echo "============================"
-echo "Aplicando Permissões!..."
-sudo chmod +x ./lamp
-echo "============================"
+
+INSTALL_SRC="./lamp"
+INSTALL_DST="/usr/local/bin/lamp"
+INSTALL_VERSION="2.0"
+
+# ─── Cores ────────────────────────────────────────────────────────────────────
+RESET=$'\e[0m'
+NEGRITO=$'\e[1m'
+PRETO=$'\e[40m'
+VERMELHO=$'\e[31m'
+VERDE_CLARO=$'\e[92m'
+AMARELO=$'\e[33m'
+AMARELO_CLARO=$'\e[93m'
+CIANO=$'\e[36m'
+CIANO_CLARO=$'\e[96m'
+BRANCO=$'\e[37m'
+CINZA=$'\e[90m'
+BG_PRETO=$'\e[40m'
+
+# ─── Helpers ──────────────────────────────────────────────────────────────────
+sep()   { echo "  ${CINZA}────────────────────────────────────────────────${RESET}"; }
+linha() { echo "  ${CINZA}════════════════════════════════════════════════${RESET}"; }
+ok()    { echo "  ${VERDE_CLARO}✔  ${BRANCO}$1${RESET}"; }
+erro()  { echo "  ${VERMELHO}✖  ${BRANCO}$1${RESET}"; echo; exit 1; }
+info()  { echo "  ${AMARELO_CLARO}➜  ${BRANCO}$1${RESET}"; }
+aviso() { echo "  ${AMARELO}⚠   ${BRANCO}$1${RESET}"; }
+item()  { echo "  ${CIANO}•  ${BRANCO}$1${RESET}"; }
+entrada(){ printf "  ${CIANO}▶  ${AMARELO_CLARO}%s${RESET} " "$1"; }
+
+cabecalho(){
+  clear
+  echo
+  echo "  ${NEGRITO}${BG_PRETO}${CIANO_CLARO}                                                    ${RESET}"
+  echo "  ${NEGRITO}${BG_PRETO}${CIANO_CLARO}   LAMP RESOURCES — Instalador v${INSTALL_VERSION}${RESET}"
+  echo "  ${NEGRITO}${BG_PRETO}${CINZA}   Douglas S. Santos  •  douglassantos2127@gmail.com${RESET}"
+  echo "  ${NEGRITO}${BG_PRETO}${CIANO_CLARO}                                                    ${RESET}"
+  echo
+}
+
+# ─── Cabeçalho ────────────────────────────────────────────────────────────────
+cabecalho
+
+# ─── Verificar arquivo fonte ──────────────────────────────────────────────────
+if [[ ! -f "$INSTALL_SRC" ]]; then
+  erro "Arquivo '$INSTALL_SRC' não encontrado. Execute o instalador na pasta correta."
+fi
+
+# ─── Verificar sudo ───────────────────────────────────────────────────────────
+if [[ $EUID -ne 0 ]] && ! sudo -n true 2>/dev/null; then
+  erro "Execute com sudo: sudo ./install"
+fi
+
+# ─── Detectar instalação existente ───────────────────────────────────────────
+MODO="instalar"
+if [[ -f "$INSTALL_DST" ]]; then
+  aviso "Lamp já está instalado em $INSTALL_DST"
+  echo
+  echo "  ${CIANO}[${AMARELO_CLARO}1${CIANO}]${RESET}  Atualizar"
+  echo "  ${CIANO}[${AMARELO_CLARO}2${CIANO}]${RESET}  Desinstalar"
+  echo "  ${CIANO}[${AMARELO_CLARO}3${CIANO}]${RESET}  Cancelar"
+  echo
+  entrada "Escolha uma opção:"
+  read opcao
+  echo
+  sep
+  case "$opcao" in
+    1) MODO="atualizar" ;;
+    2) MODO="desinstalar" ;;
+    *) aviso "Operação cancelada."; echo; exit 0 ;;
+  esac
+fi
+
+# ─── Desinstalar ─────────────────────────────────────────────────────────────
+if [[ "$MODO" == "desinstalar" ]]; then
+  info "Removendo $INSTALL_DST..."
+  sudo rm -f "$INSTALL_DST"
+  if [[ ! -f "$INSTALL_DST" ]]; then
+    ok "Lamp desinstalado com sucesso!"
+  else
+    erro "Falha ao remover $INSTALL_DST"
+  fi
+  linha
+  echo
+  exit 0
+fi
+
+# ─── Instalar / Atualizar ─────────────────────────────────────────────────────
+echo "  ${NEGRITO}${BRANCO}O seguinte será executado:${RESET}"
 echo
-echo "============================"
+item "Aplicar permissão de execução ao script"
+item "Copiar lamp → $INSTALL_DST"
+item "Verificar instalação"
 echo
-echo "Instalando o Lamp!..."
+
+if [[ "$MODO" == "atualizar" ]]; then
+  entrada "Confirmar atualização? (y/n):"
+else
+  entrada "Confirmar instalação? (y/n):"
+fi
+read confirmar
 echo
-sudo cp -v ./lamp /usr/local/bin/lamp
+
+if [[ "$confirmar" != "y" && "$confirmar" != "Y" ]]; then
+  aviso "Operação cancelada."
+  echo
+  exit 0
+fi
+
+sep
+local_erros=0
+
+# Passo 1 — Permissão
+info "[1/2]  Aplicando permissão de execução..."
+if sudo chmod +x "$INSTALL_SRC"; then
+  ok "Permissão aplicada!"
+else
+  aviso "Não foi possível aplicar chmod — continuando mesmo assim."
+  local_erros=$((local_erros+1))
+fi
+
+sep
+
+# Passo 2 — Copiar
+if [[ "$MODO" == "atualizar" ]]; then
+  info "[2/2]  Atualizando $INSTALL_DST..."
+else
+  info "[2/2]  Instalando em $INSTALL_DST..."
+fi
+
+if sudo cp -f "$INSTALL_SRC" "$INSTALL_DST" && sudo chmod +x "$INSTALL_DST"; then
+  ok "Arquivo copiado!"
+else
+  erro "Falha ao copiar para $INSTALL_DST — verifique as permissões."
+fi
+
+# ─── Verificação final ────────────────────────────────────────────────────────
+linha
+
+if [[ -x "$INSTALL_DST" ]]; then
+  if [[ "$MODO" == "atualizar" ]]; then
+    ok "Lamp atualizado com sucesso!"
+  else
+    ok "Lamp instalado com sucesso!"
+  fi
+  echo
+  item "Destino:  $INSTALL_DST"
+  item "Versão:   $INSTALL_VERSION"
+  echo
+  echo "  ${CINZA}Para usar:${RESET}  ${NEGRITO}${CIANO_CLARO}sudo lamp${RESET}"
+  echo
+else
+  erro "Instalação falhou — $INSTALL_DST não foi encontrado ou não é executável."
+fi
+
+linha
 echo
-echo "============================"
+entrada "Deseja executar o Lamp agora? (y/n):"
+read executar
 echo
-echo "============================"
-echo "Lamp Instalado com sucesso!..."
-echo "============================"
-echo
-echo "Para usar o lamp basta digitar o comando: sudo lamp"
-echo
-echo "Presione enter para continuar."
-echo
-echo "============================"
-read -r
-echo
-echo "============================"
-echo "Executando Lamp!..."
-echo "============================"
-sudo lamp
+
+if [[ "$executar" == "y" || "$executar" == "Y" ]]; then
+  echo
+  sudo lamp
+fi
