@@ -8,49 +8,49 @@
 email="webmaster@gmail.com"
 
 # ─── Cores ────────────────────────────────────────────────────────────────────
-RESET="\e[0m"
-NEGRITO="\e[1m"
-DIM="\e[2m"
+RESET=$'\e[0m'
+NEGRITO=$'\e[1m'
+DIM=$'\e[2m'
 
-PRETO="\e[30m"
-VERMELHO="\e[31m"
-VERDE="\e[32m"
-AMARELO="\e[33m"
-AZUL="\e[34m"
-MAGENTA="\e[35m"
-CIANO="\e[36m"
-BRANCO="\e[37m"
+PRETO=$'\e[30m'
+VERMELHO=$'\e[31m'
+VERDE=$'\e[32m'
+AMARELO=$'\e[33m'
+AZUL=$'\e[34m'
+MAGENTA=$'\e[35m'
+CIANO=$'\e[36m'
+BRANCO=$'\e[37m'
 
-BG_AZUL="\e[44m"
-BG_CIANO="\e[46m"
-BG_PRETO="\e[40m"
+BG_AZUL=$'\e[44m'
+BG_CIANO=$'\e[46m'
+BG_PRETO=$'\e[40m'
 
-CINZA="\e[90m"
-VERDE_CLARO="\e[92m"
-AMARELO_CLARO="\e[93m"
-AZUL_CLARO="\e[94m"
-MAGENTA_CLARO="\e[95m"
-CIANO_CLARO="\e[96m"
+CINZA=$'\e[90m'
+VERDE_CLARO=$'\e[92m'
+AMARELO_CLARO=$'\e[93m'
+AZUL_CLARO=$'\e[94m'
+MAGENTA_CLARO=$'\e[95m'
+CIANO_CLARO=$'\e[96m'
 
 # ─── Helpers visuais ──────────────────────────────────────────────────────────
-sep()    { echo -e "${CINZA}  ────────────────────────────────────────────────${RESET}"; }
-linha()  { echo -e "${CINZA}  ════════════════════════════════════════════════${RESET}"; }
+sep()    { echo "  ${CINZA}────────────────────────────────────────────────${RESET}"; }
+linha()  { echo "  ${CINZA}════════════════════════════════════════════════${RESET}"; }
 
-titulo() { echo; echo -e "  ${NEGRITO}${CIANO_CLARO}$1${RESET}"; sep; }
+titulo() { echo; echo "  ${NEGRITO}${CIANO_CLARO}$1${RESET}"; sep; }
 
-ok()     { echo -e "  ${VERDE_CLARO}✔  ${BRANCO}$1${RESET}"; }
-erro()   { echo -e "  ${VERMELHO}✖  ${BRANCO}$1${RESET}"; }
-info()   { echo -e "  ${AMARELO_CLARO}➜  ${BRANCO}$1${RESET}"; }
-aviso()  { echo -e "  ${AMARELO}⚠   ${BRANCO}$1${RESET}"; }
-item()   { echo -e "  ${CIANO}•  ${BRANCO}$1${RESET}"; }
+ok()     { echo "  ${VERDE_CLARO}✔  ${BRANCO}$1${RESET}"; }
+erro()   { echo "  ${VERMELHO}✖  ${BRANCO}$1${RESET}"; }
+info()   { echo "  ${AMARELO_CLARO}➜  ${BRANCO}$1${RESET}"; }
+aviso()  { echo "  ${AMARELO}⚠   ${BRANCO}$1${RESET}"; }
+item()   { echo "  ${CIANO}•  ${BRANCO}$1${RESET}"; }
 
 entrada(){
-  echo -en "  ${CIANO}▶  ${AMARELO_CLARO}$1${RESET} "
+  printf "  ${CIANO}▶  ${AMARELO_CLARO}%s${RESET} " "$1"
 }
 
 pausar() {
   echo
-  echo -en "  ${CINZA}Pressione ENTER para voltar...${RESET}"
+  printf "  ${CINZA}Pressione ENTER para voltar...${RESET}"
   read
 }
 
@@ -59,12 +59,12 @@ cabecalho(){
   local subtitulo="$2"
   clear
   echo
-  echo -e "  ${NEGRITO}${BG_PRETO}${CIANO_CLARO}                                                    ${RESET}"
-  echo -e "  ${NEGRITO}${BG_PRETO}${CIANO_CLARO}   $titulo${RESET}"
+  echo "  ${NEGRITO}${BG_PRETO}${CIANO_CLARO}                                                    ${RESET}"
+  echo "  ${NEGRITO}${BG_PRETO}${CIANO_CLARO}   $titulo${RESET}"
   if [[ -n "$subtitulo" ]]; then
-    echo -e "  ${NEGRITO}${BG_PRETO}${CINZA}   $subtitulo${RESET}"
+    echo "  ${NEGRITO}${BG_PRETO}${CINZA}   $subtitulo${RESET}"
   fi
-  echo -e "  ${NEGRITO}${BG_PRETO}${CIANO_CLARO}                                                    ${RESET}"
+  echo "  ${NEGRITO}${BG_PRETO}${CIANO_CLARO}                                                    ${RESET}"
   echo
 }
 
@@ -383,7 +383,7 @@ CriarUsuarioPostgres(){
   entrada "Nome do usuário:"
   read pguser
   sep
-  echo -en "  ${CIANO}▶  ${AMARELO_CLARO}Senha do usuário:${RESET} "
+  printf "  ${CIANO}▶  ${AMARELO_CLARO}%s${RESET} " "Senha do usuário:"
   read -s pgpass
   echo
   sep
@@ -790,8 +790,8 @@ AdicionarDominioOnline(){
   linha
   ok "Domínio adicionado e SSL ativo!"
   echo
-  echo -e "  ${NEGRITO}${VERDE_CLARO}  HTTP  ${RESET}  http://$dominio"
-  echo -e "  ${NEGRITO}${VERDE_CLARO}  HTTPS ${RESET}  https://$dominio"
+  echo "  ${NEGRITO}${VERDE_CLARO}  HTTP  ${RESET}  http://$dominio"
+  echo "  ${NEGRITO}${VERDE_CLARO}  HTTPS ${RESET}  https://$dominio"
   linha
   pausar
   MenuApache
@@ -872,7 +872,7 @@ AdicionarDominioLocal(){
   linha
   ok "Domínio local adicionado com sucesso!"
   echo
-  echo -e "  ${NEGRITO}${VERDE_CLARO}  Local ${RESET}  http://$dominio"
+  echo "  ${NEGRITO}${VERDE_CLARO}  Local ${RESET}  http://$dominio"
   linha
   pausar
   MenuApache
@@ -936,7 +936,7 @@ VerificaApache() {
   titulo "Status do Apache"
   info "Verificando porta 80 via NMAP..."
   result=$(nmap -A 127.0.0.1 | grep 80)
-  echo -e "  ${BRANCO}$result${RESET}"
+  echo "  ${BRANCO}$result${RESET}"
   logger - WGR MF LOG = Status do Apache = $result
   linha
   pausar
@@ -1263,7 +1263,7 @@ ListarBackups(){
 Sair() {
   clear
   echo
-  echo -e "  ${CIANO_CLARO}Até logo!${RESET}"
+  echo "  ${CIANO_CLARO}Até logo!${RESET}"
   echo
   exit
 }
