@@ -27,6 +27,7 @@ InformacoesServidor(){
   item "Composer:   $(composer --version 2>/dev/null | head -1 || echo 'não instalado')"
   item "PostgreSQL: $(psql --version 2>/dev/null || echo 'não instalado')"
   item "MySQL:      $(mysql --version 2>/dev/null || echo 'não instalado')"
+  item "MongoDB:    $(mongod --version 2>/dev/null | head -1 || echo 'não instalado')"
   item "Redis:      $(redis-server --version 2>/dev/null || echo 'não instalado')"
   linha
   pausar
@@ -59,6 +60,7 @@ VerServicosAtivos(){
   apache_status=$(sudo systemctl is-active apache2 2>/dev/null)
   pg_status=$(sudo systemctl is-active postgresql 2>/dev/null)
   my_status=$(sudo systemctl is-active mysql 2>/dev/null)
+  mongo_status=$(sudo systemctl is-active mongod 2>/dev/null)
   redis_status=$(sudo systemctl is-active redis-server 2>/dev/null)
 
   if [[ "$apache_status" == "active" ]]; then
@@ -75,6 +77,11 @@ VerServicosAtivos(){
     ok "MySQL:       ATIVO"
   else
     erro "MySQL:       INATIVO"
+  fi
+  if [[ "$mongo_status" == "active" ]]; then
+    ok "MongoDB:     ATIVO"
+  else
+    erro "MongoDB:     INATIVO"
   fi
   if [[ "$redis_status" == "active" ]]; then
     ok "Redis:       ATIVO"
@@ -107,7 +114,7 @@ LimparLogsSistema(){
 MenuSistema(){
   cabecalho "SISTEMA" "Douglas S. Santos"
   opcao_menu 1 "Informações do Servidor"
-  opcao_menu 2 "Status dos Serviços (Apache / PostgreSQL / Redis)"
+  opcao_menu 2 "Status dos Serviços (Apache / PostgreSQL / MySQL / MongoDB / Redis)"
   opcao_menu 3 "Atualizar Sistema"
   opcao_menu 4 "Portas em Uso"
   opcao_menu 5 "Limpar Logs do Apache"

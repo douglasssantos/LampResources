@@ -27,6 +27,7 @@ _lamp_modules=(
   redis
   postgres
   mysql
+  mongodb
   sistema
   apache
   node
@@ -64,12 +65,13 @@ Menu(){
   sep
   opcao_menu 4 "PostgreSQL"
   opcao_menu 5 "MySQL"
-  opcao_menu 6 "Redis"
+  opcao_menu 6 "MongoDB"
+  opcao_menu 7 "Redis"
   sep
-  opcao_menu 7 "Sistema"
+  opcao_menu 8 "Sistema"
   sep
-  opcao_menu 8 "Instalar Composer"
-  opcao_menu 9 "Clonar Repositório Git"
+  opcao_menu 9 "Instalar Composer"
+  opcao_menu 10 "Clonar Repositório Git"
   echo
   opcao_menu 0 "Sair"
   echo
@@ -82,10 +84,11 @@ Menu(){
     3) MenuNode;;
     4) MenuPostgres;;
     5) MenuMySQL;;
-    6) MenuRedis;;
-    7) MenuSistema;;
-    8) InstalarComposer;;
-    9) ClonarRepositorioGit;;
+    6) MenuMongoDB;;
+    7) MenuRedis;;
+    8) MenuSistema;;
+    9) InstalarComposer;;
+    10) ClonarRepositorioGit;;
     0) Sair;;
     *) erro "Opção inválida!" ; sleep 1 ; Menu ;;
   esac

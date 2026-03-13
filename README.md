@@ -62,6 +62,35 @@ Com ele você gerencia todo o seu ambiente de desenvolvimento e produção a par
 | Limpar backups antigos (por dias) | **Agendar backup automático via cron** |
 | Ver e remover agendamentos | — |
 
+### 🐬 MySQL
+| | |
+|---|---|
+| Instalar / Desinstalar | Iniciar / Parar / Reiniciar / Status |
+| Assistente de segurança | Criar / Deletar / Listar usuários |
+| Criar / Deletar / Listar bancos de dados | **Submenu completo de Backup / Restore** |
+
+#### 💾 Backup MySQL
+| | |
+|---|---|
+| Backup em SQL ou `.sql.gz` | Backup de banco único ou **todos os bancos** |
+| Restaurar backup | Listar backups com tamanho e data |
+| Limpar backups antigos | **Agendar backup automático via cron** |
+| Ver e remover agendamentos | — |
+
+### 🍃 MongoDB
+| | |
+|---|---|
+| Instalar / Desinstalar | Iniciar / Parar / Reiniciar / Status |
+| Listar bancos de dados | **Submenu completo de Backup / Restore** |
+
+#### 💾 Backup MongoDB
+| | |
+|---|---|
+| Backup em diretório BSON, `.archive` ou `.archive.gz` | Backup de banco único ou **todos os bancos** |
+| Restaurar backup | Listar backups com tamanho e data |
+| Limpar backups antigos | **Agendar backup automático via cron** |
+| Ver e remover agendamentos | — |
+
 ### 📦 Redis
 | | |
 |---|---|
@@ -72,7 +101,7 @@ Com ele você gerencia todo o seu ambiente de desenvolvimento e produção a par
 ### 🖥️ Sistema
 | | |
 |---|---|
-| Informações do servidor (SO, CPU, RAM, disco, IP) | Status de todos os serviços (Apache, PostgreSQL, Redis) |
+| Informações do servidor (SO, CPU, RAM, disco, IP) | Status de todos os serviços (Apache, PostgreSQL, MySQL, MongoDB, Redis) |
 | Atualizar o sistema (`apt upgrade`) | Ver portas em uso |
 | Limpar logs do Apache | — |
 
@@ -138,6 +167,7 @@ LampResources/
     ├── node.sh           # Node.js (NVM, versões, npm) e Git clone
     ├── postgres.sh       # PostgreSQL (serviço, usuários, bancos, backup)
     ├── mysql.sh          # MySQL (serviço, usuários, bancos, backup)
+    ├── mongodb.sh        # MongoDB (serviço, bancos, backup)
     ├── redis.sh          # Redis (serviço, cache, testes)
     └── sistema.sh        # Informações do servidor, serviços, atualizações
 ```

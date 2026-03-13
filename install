@@ -16,6 +16,7 @@ MODULES_LIST=(
   redis
   postgres
   mysql
+  mongodb
   sistema
   apache
   node
