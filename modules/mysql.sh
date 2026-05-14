@@ -703,13 +703,12 @@ ConexaoRemotaMySQL(){
   for f in /etc/mysql/mysql.conf.d/mysqld.cnf /etc/mysql/my.cnf /etc/my.cnf; do
     [[ -f "$f" ]] && { _conf="$f"; break; }
   done
-
   if [[ -z "$_conf" ]]; then
     erro "Arquivo de configuração do MySQL não encontrado."
     linha; pausar; MenuMySQL; return
   fi
 
-  # ── Ler bind-address e porta atuais ──────────────────────────────────────
+  # ── Ler estado atual ──────────────────────────────────────────────────────
   local _bind _porta _ip _remota
   _bind=$(grep -i '^\s*bind-address' "$_conf" | awk -F'=' '{print $2}' | tr -d ' \t' | tail -1)
   [[ -z "$_bind" ]] && _bind="127.0.0.1"
@@ -718,6 +717,7 @@ ConexaoRemotaMySQL(){
   _ip=$(hostname -I 2>/dev/null | awk '{print $1}')
   echo "$_bind" | grep -qE '^(0\.0\.0\.0|::)' && _remota=true || _remota=false
 
+  # ── Exibir dados de conexão ───────────────────────────────────────────────
   echo
   echo "  ${NEGRITO}${BRANCO}Dados de Conexão${RESET}"
   sep
@@ -726,71 +726,152 @@ ConexaoRemotaMySQL(){
   item "Porta             : $_porta"
   item "IP do servidor    : ${_ip:-não detectado}"
   sep
+
   if $_remota; then
-    ok   "Conexão remota    : ${VERDE_CLARO}ATIVA${RESET} (aceita conexões externas)"
+    ok "Conexão remota    : ${VERDE_CLARO}ATIVA${RESET}"
     sep
     echo "  ${BRANCO}String de conexão:${RESET}"
-    item "Host: ${_ip:-<IP_SERVIDOR>}"
-    item "Porta: $_porta"
+    item "Host: ${_ip:-<IP_SERVIDOR>}   Porta: $_porta"
     item "Usuário: <usuario>   Senha: <senha>"
+    sep
+    # Mostrar usuários com acesso remoto
+    local _remote_users
+    _remote_users=$(_my_exec -e "SELECT CONCAT('  ',User,'@',Host) FROM mysql.user WHERE Host NOT IN ('localhost','127.0.0.1','::1') AND Host != '' AND User NOT IN ('root','mysql.sys','mysql.session','mysql.infoschema');" 2>/dev/null | tail -n +2)
+    if [[ -n "$_remote_users" ]]; then
+      echo "  ${BRANCO}Usuários com acesso remoto:${RESET}"
+      echo "$_remote_users" | while IFS= read -r line; do
+        [[ -n "$line" ]] && item "$line"
+      done
+      sep
+    fi
+    # Mostrar regras UFW para a porta MySQL
+    if command -v ufw &>/dev/null; then
+      echo "  ${BRANCO}Regras UFW para porta $_porta:${RESET}"
+      local _ufw_rules
+      _ufw_rules=$(sudo ufw status 2>/dev/null | grep "$_porta")
+      if [[ -n "$_ufw_rules" ]]; then
+        echo "$_ufw_rules" | while IFS= read -r line; do item "$line"; done
+      else
+        aviso "Nenhuma regra UFW definida para porta $_porta"
+      fi
+      sep
+    fi
+    echo
+    opcao_menu 1 "Desativar conexão remota"
+    opcao_menu 2 "Adicionar IP específico permitido (UFW + grant)"
+    opcao_menu 3 "Remover IP específico (UFW)"
   else
     aviso "Conexão remota    : ${AMARELO}INATIVA${RESET} (aceita apenas conexões locais)"
     sep
     echo "  ${BRANCO}String de conexão (local):${RESET}"
     item "Host: 127.0.0.1   Porta: $_porta"
     item "Usuário: <usuario>   Senha: <senha>"
+    echo
+    opcao_menu 1 "Ativar para TODOS os IPs"
+    opcao_menu 2 "Ativar para IPs específicos"
   fi
   echo
-  sep
-
-  if $_remota; then
-    opcao_menu 1 "Desativar conexão remota (bind-address=127.0.0.1)"
-  else
-    opcao_menu 1 "Ativar conexão remota (bind-address=0.0.0.0)"
-  fi
   opcao_menu 0 "Voltar"
   echo
   entrada "Escolha:"
   read _opcao
   sep
 
-  case $_opcao in
-    1)
-      if $_remota; then
+  # ── Ativar/Desativar bind-address ─────────────────────────────────────────
+  _my_set_bind(){
+    local _valor="$1"
+    if grep -qi '^\s*bind-address' "$_conf"; then
+      sudo sed -i "s/^\s*bind-address.*$/bind-address = $_valor/" "$_conf"
+    else
+      printf '\nbind-address = %s\n' "$_valor" | sudo tee -a "$_conf" > /dev/null
+    fi
+  }
+
+  # ── Adicionar regra UFW para IP + porta ───────────────────────────────────
+  _my_ufw_add(){
+    local _target_ip="$1"
+    if command -v ufw &>/dev/null; then
+      info "Adicionando regra UFW: permitir $_target_ip → porta $_porta..."
+      sudo ufw allow from "$_target_ip" to any port "$_porta" proto tcp
+    else
+      aviso "UFW não instalado. Gerencie o firewall manualmente."
+    fi
+  }
+
+  if $_remota; then
+    case $_opcao in
+      1)
         info "Desativando conexão remota..."
-        if grep -qi '^\s*bind-address' "$_conf"; then
-          sudo sed -i 's/^\s*bind-address.*/bind-address = 127.0.0.1/' "$_conf"
-        else
-          printf '\nbind-address = 127.0.0.1\n' | sudo tee -a "$_conf" > /dev/null
-        fi
+        _my_set_bind "127.0.0.1"
         ok "Conexão remota desativada."
-      else
-        aviso "Ativar conexão remota expõe o MySQL na rede!"
-        aviso "Certifique-se de usar senhas fortes e firewall adequado."
-        entrada "Confirmar? (y/n):"
-        read _conf_remote
-        if [[ "$_conf_remote" != "y" && "$_conf_remote" != "Y" ]]; then
-          aviso "Operação cancelada."
-          pausar; MenuMySQL; return
-        fi
-        info "Ativando conexão remota..."
-        if grep -qi '^\s*bind-address' "$_conf"; then
-          sudo sed -i 's/^\s*bind-address.*/bind-address = 0.0.0.0/' "$_conf"
-        else
-          printf '\nbind-address = 0.0.0.0\n' | sudo tee -a "$_conf" > /dev/null
-        fi
-        ok "Conexão remota ativada."
         sep
-        item "Lembre-se: o usuário deve ter host '%' ou o IP remoto nas permissões."
-        item "Ex: GRANT ALL ON banco.* TO 'user'@'%' IDENTIFIED BY 'senha';"
-      fi
-      sep
-      info "Reiniciando MySQL..."
-      sudo systemctl restart mysql.service
-      ok "MySQL reiniciado com sucesso!"
-      ;;
-    *) ;;
-  esac
+        info "Reiniciando MySQL..."
+        sudo systemctl restart mysql.service
+        ok "MySQL reiniciado com sucesso!"
+        ;;
+      2)
+        entrada "Digite o IP a permitir (ex: 192.168.1.100):"
+        read _new_ip
+        [[ -z "$_new_ip" ]] && { aviso "IP inválido."; pausar; ConexaoRemotaMySQL; return; }
+        sep
+        _my_ufw_add "$_new_ip"
+        sep
+        info "Dica: crie/atualize o usuário MySQL com o host '$_new_ip':"
+        item "GRANT ALL ON banco.* TO 'user'@'$_new_ip' IDENTIFIED BY 'senha';"
+        ;;
+      3)
+        if command -v ufw &>/dev/null; then
+          entrada "Digite o IP a remover da liberação UFW (ex: 192.168.1.100):"
+          read _rem_ip
+          [[ -z "$_rem_ip" ]] && { aviso "IP inválido."; pausar; ConexaoRemotaMySQL; return; }
+          sep
+          info "Removendo regra UFW para $_rem_ip porta $_porta..."
+          sudo ufw delete allow from "$_rem_ip" to any port "$_porta" proto tcp
+          ok "Regra removida."
+        else
+          aviso "UFW não instalado. Gerencie o firewall manualmente."
+        fi
+        ;;
+      *) MenuMySQL; return ;;
+    esac
+  else
+    case $_opcao in
+      1)
+        aviso "Isso permitirá conexões de QUALQUER IP externo!"
+        entrada "Confirmar? (y/n):"
+        read _c; [[ "$_c" != "y" && "$_c" != "Y" ]] && { aviso "Cancelado."; pausar; MenuMySQL; return; }
+        _my_set_bind "0.0.0.0"
+        ok "Conexão remota ativada para todos os IPs."
+        sep
+        item "Dica: crie usuários com host '%' para acesso irrestrito:"
+        item "GRANT ALL ON banco.* TO 'user'@'%' IDENTIFIED BY 'senha';"
+        sep
+        info "Reiniciando MySQL..."
+        sudo systemctl restart mysql.service
+        ok "MySQL reiniciado com sucesso!"
+        ;;
+      2)
+        entrada "Digite os IPs permitidos separados por vírgula (ex: 192.168.1.10,10.0.0.5):"
+        read _ips_raw
+        [[ -z "$_ips_raw" ]] && { aviso "Nenhum IP informado."; pausar; MenuMySQL; return; }
+        _my_set_bind "0.0.0.0"
+        ok "bind-address definido para 0.0.0.0."
+        sep
+        IFS=',' read -ra _ip_list <<< "$_ips_raw"
+        for _target_ip in "${_ip_list[@]}"; do
+          _target_ip=$(echo "$_target_ip" | tr -d ' ')
+          [[ -z "$_target_ip" ]] && continue
+          _my_ufw_add "$_target_ip"
+          item "Dica de grant: GRANT ALL ON banco.* TO 'user'@'$_target_ip' IDENTIFIED BY 'senha';"
+        done
+        sep
+        info "Reiniciando MySQL..."
+        sudo systemctl restart mysql.service
+        ok "MySQL reiniciado com sucesso!"
+        ;;
+      *) MenuMySQL; return ;;
+    esac
+  fi
 
   linha
   pausar

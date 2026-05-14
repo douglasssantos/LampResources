@@ -643,35 +643,37 @@ MY_BACKUP_DIR="/var/backups/mysql"
 ConexaoRemotaPostgres(){
   titulo "Conexão Remota — PostgreSQL"
 
-  # ── Detectar postgresql.conf ──────────────────────────────────────────────
-  local _pgconf
+  # ── Detectar arquivos de configuração ─────────────────────────────────────
+  local _pgconf _hbaconf
   _pgconf=$(sudo -u postgres psql -tAc "SHOW config_file;" 2>/dev/null | tr -d ' ')
-  if [[ -z "$_pgconf" || ! -f "$_pgconf" ]]; then
-    # fallback por versão
+  [[ -z "$_pgconf" || ! -f "$_pgconf" ]] && \
     _pgconf=$(find /etc/postgresql -name "postgresql.conf" 2>/dev/null | sort -rV | head -1)
-  fi
-
-  # ── Detectar pg_hba.conf ──────────────────────────────────────────────────
-  local _hbaconf
   _hbaconf=$(sudo -u postgres psql -tAc "SHOW hba_file;" 2>/dev/null | tr -d ' ')
-  if [[ -z "$_hbaconf" || ! -f "$_hbaconf" ]]; then
+  [[ -z "$_hbaconf" || ! -f "$_hbaconf" ]] && \
     _hbaconf=$(find /etc/postgresql -name "pg_hba.conf" 2>/dev/null | sort -rV | head -1)
-  fi
 
   if [[ -z "$_pgconf" ]]; then
     erro "Arquivo postgresql.conf não encontrado."
     linha; pausar; MenuPostgres; return
   fi
 
-  # ── Ler listen_addresses e porta ─────────────────────────────────────────
+  # ── Ler estado atual ──────────────────────────────────────────────────────
   local _listen _porta _ip _remota
-  _listen=$(grep -i "^\s*listen_addresses" "$_pgconf" | awk -F"'" '{print $2}' | tr -d ' ' | tail -1)
+  _listen=$(grep -i "^\s*listen_addresses" "$_pgconf" | grep -v '^\s*#' | awk -F"'" '{print $2}' | tr -d ' ' | tail -1)
   [[ -z "$_listen" ]] && _listen="localhost"
-  _porta=$(grep -i "^\s*port" "$_pgconf" | awk -F'=' '{print $2}' | tr -d ' \t#' | grep -E '^[0-9]+$' | tail -1)
+  _porta=$(grep -i "^\s*port" "$_pgconf" | grep -v '^\s*#' | awk -F'=' '{print $2}' | tr -d ' \t#' | grep -E '^[0-9]+$' | tail -1)
   [[ -z "$_porta" ]] && _porta="5432"
   _ip=$(hostname -I 2>/dev/null | awk '{print $1}')
   echo "$_listen" | grep -qE '(\*|0\.0\.0\.0)' && _remota=true || _remota=false
 
+  # ── Ler entradas LAMP no pg_hba.conf ────────────────────────────────────
+  local _lamp_entries=""
+  if [[ -n "$_hbaconf" ]]; then
+    _lamp_entries=$(awk '/# LAMP-REMOTE-BEGIN/,/# LAMP-REMOTE-END/' "$_hbaconf" 2>/dev/null \
+      | grep -v '^#' | grep -v '^\s*$')
+  fi
+
+  # ── Exibir dados de conexão ───────────────────────────────────────────────
   echo
   echo "  ${NEGRITO}${BRANCO}Dados de Conexão${RESET}"
   sep
@@ -681,82 +683,184 @@ ConexaoRemotaPostgres(){
   item "Porta             : $_porta"
   item "IP do servidor    : ${_ip:-não detectado}"
   sep
+
   if $_remota; then
-    ok   "Conexão remota    : ${VERDE_CLARO}ATIVA${RESET} (listen_addresses='$_listen')"
+    ok "Conexão remota    : ${VERDE_CLARO}ATIVA${RESET}"
     sep
     echo "  ${BRANCO}String de conexão:${RESET}"
-    item "Host: ${_ip:-<IP_SERVIDOR>}"
-    item "Porta: $_porta"
+    item "Host: ${_ip:-<IP_SERVIDOR>}   Porta: $_porta"
     item "Usuário: <usuario>   Banco: <banco>"
+    sep
+    echo "  ${BRANCO}IPs permitidos (pg_hba.conf gerenciados pelo lamp):${RESET}"
+    if [[ -n "$_lamp_entries" ]]; then
+      echo "$_lamp_entries" | while IFS= read -r line; do
+        [[ -n "$line" ]] && item "$line"
+      done
+    else
+      aviso "Nenhuma entrada lamp encontrada — pode haver regras manuais no pg_hba.conf."
+    fi
+    sep
+    echo
+    opcao_menu 1 "Desativar conexão remota"
+    opcao_menu 2 "Adicionar IP permitido"
+    opcao_menu 3 "Remover IP permitido"
   else
     aviso "Conexão remota    : ${AMARELO}INATIVA${RESET} (aceita apenas conexões locais)"
     sep
     echo "  ${BRANCO}String de conexão (local):${RESET}"
     item "Host: 127.0.0.1   Porta: $_porta"
     item "Usuário: <usuario>   Banco: <banco>"
+    echo
+    opcao_menu 1 "Ativar para TODOS os IPs"
+    opcao_menu 2 "Ativar para IPs específicos"
   fi
   echo
-  sep
-
-  if $_remota; then
-    opcao_menu 1 "Desativar conexão remota (listen_addresses='localhost')"
-  else
-    opcao_menu 1 "Ativar conexão remota (listen_addresses='*')"
-  fi
   opcao_menu 0 "Voltar"
   echo
   entrada "Escolha:"
   read _opcao
   sep
 
-  case $_opcao in
-    1)
-      if $_remota; then
+  # ── Helpers internos ──────────────────────────────────────────────────────
+  _pg_set_listen(){
+    local _val="$1"
+    if grep -qi "^\s*listen_addresses" "$_pgconf"; then
+      sudo sed -i "s|^\s*listen_addresses.*|listen_addresses = '$_val'|" "$_pgconf"
+    else
+      printf "\nlisten_addresses = '%s'\n" "$_val" | sudo tee -a "$_pgconf" > /dev/null
+    fi
+  }
+
+  _pg_hba_bloco_existe(){
+    grep -q "# LAMP-REMOTE-BEGIN" "$_hbaconf" 2>/dev/null
+  }
+
+  _pg_hba_add_ip(){
+    local _target_ip="$1"
+    # normalizar CIDR
+    [[ "$_target_ip" != */* ]] && _target_ip="${_target_ip}/32"
+    if [[ -z "$_hbaconf" ]]; then
+      aviso "pg_hba.conf não encontrado. Adicione manualmente: host all all $_target_ip md5"
+      return
+    fi
+    if grep -q "$_target_ip" "$_hbaconf" 2>/dev/null; then
+      aviso "IP $_target_ip já existe no pg_hba.conf."
+      return
+    fi
+    if _pg_hba_bloco_existe; then
+      # inserir antes da linha LAMP-REMOTE-END
+      sudo sed -i "/# LAMP-REMOTE-END/i host    all             all             $_target_ip             md5" "$_hbaconf"
+    else
+      printf '\n# LAMP-REMOTE-BEGIN\nhost    all             all             %s             md5\n# LAMP-REMOTE-END\n' \
+        "$_target_ip" | sudo tee -a "$_hbaconf" > /dev/null
+    fi
+    ok "IP $_target_ip adicionado ao pg_hba.conf."
+  }
+
+  _pg_hba_remove_ip(){
+    local _target_ip="$1"
+    [[ "$_target_ip" != */* ]] && _target_ip="${_target_ip}/32"
+    if [[ -z "$_hbaconf" ]]; then
+      aviso "pg_hba.conf não encontrado."
+      return
+    fi
+    sudo sed -i "\|$_target_ip|d" "$_hbaconf"
+    ok "IP $_target_ip removido do pg_hba.conf."
+  }
+
+  _pg_restart(){
+    sep
+    info "Reiniciando PostgreSQL..."
+    sudo systemctl restart postgresql.service
+    ok "PostgreSQL reiniciado com sucesso!"
+  }
+
+  # ── Lógica principal ──────────────────────────────────────────────────────
+  if $_remota; then
+    case $_opcao in
+      1)
         info "Desativando conexão remota..."
-        if grep -qi "^\s*listen_addresses" "$_pgconf"; then
-          sudo sed -i "s|^\s*listen_addresses.*|listen_addresses = 'localhost'|" "$_pgconf"
-        else
-          printf "\nlisten_addresses = 'localhost'\n" | sudo tee -a "$_pgconf" > /dev/null
-        fi
-        # Remover entradas host remotas do pg_hba.conf
-        if [[ -n "$_hbaconf" ]]; then
-          sudo sed -i '/^host[[:space:]].*0\.0\.0\.0\/0/d' "$_hbaconf"
-          sudo sed -i '/^host[[:space:]].*::\/0/d' "$_hbaconf"
+        _pg_set_listen "localhost"
+        # Remover bloco LAMP inteiro do pg_hba.conf
+        if [[ -n "$_hbaconf" ]] && _pg_hba_bloco_existe; then
+          sudo sed -i '/# LAMP-REMOTE-BEGIN/,/# LAMP-REMOTE-END/d' "$_hbaconf"
+          ok "Entradas remotas removidas do pg_hba.conf."
         fi
         ok "Conexão remota desativada."
-      else
-        aviso "Ativar conexão remota expõe o PostgreSQL na rede!"
-        aviso "Certifique-se de usar senhas fortes e firewall adequado."
-        entrada "Confirmar? (y/n):"
-        read _conf_remote
-        if [[ "$_conf_remote" != "y" && "$_conf_remote" != "Y" ]]; then
-          aviso "Operação cancelada."
-          pausar; MenuPostgres; return
-        fi
-        info "Ativando conexão remota em postgresql.conf..."
-        if grep -qi "^\s*listen_addresses" "$_pgconf"; then
-          sudo sed -i "s|^\s*listen_addresses.*|listen_addresses = '*'|" "$_pgconf"
+        _pg_restart
+        ;;
+      2)
+        entrada "Digite o IP a permitir (ex: 192.168.1.100 ou 10.0.0.0/24):"
+        read _new_ip
+        [[ -z "$_new_ip" ]] && { aviso "IP inválido."; pausar; ConexaoRemotaPostgres; return; }
+        _pg_hba_add_ip "$_new_ip"
+        _pg_restart
+        ;;
+      3)
+        if [[ -z "$_lamp_entries" ]]; then
+          aviso "Nenhuma entrada gerenciada pelo lamp para remover."
         else
-          printf "\nlisten_addresses = '*'\n" | sudo tee -a "$_pgconf" > /dev/null
+          echo "  ${BRANCO}IPs atualmente permitidos:${RESET}"
+          local -a _entry_ips=()
+          while IFS= read -r line; do
+            [[ -z "$line" ]] && continue
+            local _eip
+            _eip=$(echo "$line" | awk '{print $4}')
+            _entry_ips+=("$_eip")
+          done <<< "$_lamp_entries"
+          _selecionar "IP a remover" "${_entry_ips[@]}"
+          local _rem_ip="$_SELECIONADO"
+          sep
+          _pg_hba_remove_ip "$_rem_ip"
+          # Se não sobrou nenhuma entrada, desativar listen_addresses
+          local _remaining
+          _remaining=$(awk '/# LAMP-REMOTE-BEGIN/,/# LAMP-REMOTE-END/' "$_hbaconf" 2>/dev/null \
+            | grep -v '^#' | grep -v '^\s*$')
+          if [[ -z "$_remaining" ]]; then
+            info "Nenhum IP restante — revertendo para conexão local..."
+            _pg_set_listen "localhost"
+          fi
+          _pg_restart
         fi
-        # Adicionar regra no pg_hba.conf se não existir
+        ;;
+      *) MenuPostgres; return ;;
+    esac
+  else
+    case $_opcao in
+      1)
+        aviso "Isso permitirá conexões de QUALQUER IP externo!"
+        entrada "Confirmar? (y/n):"
+        read _c; [[ "$_c" != "y" && "$_c" != "Y" ]] && { aviso "Cancelado."; pausar; MenuPostgres; return; }
+        _pg_set_listen "*"
         if [[ -n "$_hbaconf" ]]; then
-          if ! grep -q "^host.*0\.0\.0\.0\/0" "$_hbaconf"; then
-            printf '\n# Conexão remota habilitada pelo lamp\nhost    all             all             0.0.0.0/0               md5\nhost    all             all             ::/0                    md5\n' | sudo tee -a "$_hbaconf" > /dev/null
+          if ! _pg_hba_bloco_existe || ! grep -q "0\.0\.0\.0/0" "$_hbaconf" 2>/dev/null; then
+            printf '\n# LAMP-REMOTE-BEGIN\nhost    all             all             0.0.0.0/0               md5\nhost    all             all             ::/0                    md5\n# LAMP-REMOTE-END\n' \
+              | sudo tee -a "$_hbaconf" > /dev/null
           fi
         fi
-        ok "Conexão remota ativada."
+        ok "Conexão remota ativada para todos os IPs."
+        item "Libere a porta no firewall: sudo ufw allow $_porta/tcp"
+        _pg_restart
+        ;;
+      2)
+        entrada "Digite os IPs permitidos separados por vírgula (ex: 192.168.1.10,10.0.0.0/24):"
+        read _ips_raw
+        [[ -z "$_ips_raw" ]] && { aviso "Nenhum IP informado."; pausar; MenuPostgres; return; }
+        _pg_set_listen "*"
         sep
-        item "Regra adicionada ao pg_hba.conf: host all all 0.0.0.0/0 md5"
-        item "Libere a porta $_porta no firewall: sudo ufw allow $_porta/tcp"
-      fi
-      sep
-      info "Reiniciando PostgreSQL..."
-      sudo systemctl restart postgresql.service
-      ok "PostgreSQL reiniciado com sucesso!"
-      ;;
-    *) ;;
-  esac
+        IFS=',' read -ra _ip_list <<< "$_ips_raw"
+        for _target_ip in "${_ip_list[@]}"; do
+          _target_ip=$(echo "$_target_ip" | tr -d ' ')
+          [[ -z "$_target_ip" ]] && continue
+          _pg_hba_add_ip "$_target_ip"
+        done
+        ok "Conexão remota ativada para IPs específicos."
+        item "Libere a porta no firewall por IP: sudo ufw allow from <IP> to any port $_porta"
+        _pg_restart
+        ;;
+      *) MenuPostgres; return ;;
+    esac
+  fi
 
   linha
   pausar
