@@ -448,6 +448,123 @@ DeletarUsuarioPostgres(){
   pausar
   MenuPostgres
 }
+
+ListarUsuariosPostgres(){
+  titulo "Usuários do PostgreSQL"
+  sudo -u postgres psql -c "\du"
+  linha
+  pausar
+  MenuPostgres
+}
+
+RenomearUsuarioPostgres(){
+  titulo "Renomear Usuário PostgreSQL"
+  info "Usuários existentes:"
+  sep
+  sudo -u postgres psql -c "\du"
+  sep
+  entrada "Nome atual do usuário:"
+  read pguser
+  sep
+  entrada "Novo nome do usuário:"
+  read pgnewuser
+  sep
+  info "Renomeando '$pguser' → '$pgnewuser'..."
+  sudo -u postgres psql -c "ALTER USER $pguser RENAME TO $pgnewuser;"
+  ok "Usuário renomeado com sucesso!"
+  linha
+  pausar
+  MenuPostgres
+}
+
+AlterarSenhaUsuarioPostgres(){
+  titulo "Alterar Senha do Usuário PostgreSQL"
+  info "Usuários existentes:"
+  sep
+  sudo -u postgres psql -c "\du"
+  sep
+  entrada "Nome do usuário:"
+  read pguser
+  sep
+  printf "  ${CIANO}▶  ${AMARELO_CLARO}%s${RESET} " "Nova senha:"
+  read -s pgpass
+  echo
+  sep
+  info "Alterando senha de '$pguser'..."
+  sudo -u postgres psql -c "ALTER USER $pguser WITH PASSWORD '$pgpass';"
+  ok "Senha alterada com sucesso!"
+  linha
+  pausar
+  MenuPostgres
+}
+
+AlterarPermissoesUsuarioPostgres(){
+  titulo "Alterar Permissões do Usuário PostgreSQL"
+  info "Usuários existentes:"
+  sep
+  sudo -u postgres psql -c "\du"
+  sep
+  entrada "Nome do usuário:"
+  read pguser
+  sep
+  info "Bancos disponíveis:"
+  sudo -u postgres psql -c "\l" 2>/dev/null
+  sep
+  entrada "Nome do banco:"
+  read pgdb
+  sep
+  echo "  ${BRANCO}Permissões disponíveis:${RESET}"
+  item "CONNECT, CREATE, TEMPORARY"
+  sep
+  entrada "Digite as permissões separadas por vírgula (ex: CONNECT,CREATE):"
+  read pgperms
+  sep
+  aviso "Revogar permissões anteriores antes de aplicar as novas?"
+  entrada "Revogar tudo antes? (y/n):"
+  read revogar
+  if [[ "$revogar" == "y" || "$revogar" == "Y" ]]; then
+    info "Revogando permissões em '$pgdb' para '$pguser'..."
+    sudo -u postgres psql -c "REVOKE ALL PRIVILEGES ON DATABASE $pgdb FROM $pguser;"
+  fi
+  sep
+  info "Concedendo permissões [$pgperms] em '$pgdb' para '$pguser'..."
+  sudo -u postgres psql -c "GRANT $pgperms ON DATABASE $pgdb TO $pguser;"
+  ok "Permissões atualizadas com sucesso!"
+  linha
+  pausar
+  MenuPostgres
+}
+
+GrantAllUsuarioPostgres(){
+  titulo "Conceder Todas as Permissões — PostgreSQL"
+  info "Usuários existentes:"
+  sep
+  sudo -u postgres psql -c "\du"
+  sep
+  entrada "Nome do usuário:"
+  read pguser
+  sep
+  info "Bancos disponíveis:"
+  sudo -u postgres psql -c "\l" 2>/dev/null
+  sep
+  entrada "Nome do banco:"
+  read pgdb
+  sep
+  aviso "Conceder ALL PRIVILEGES no banco '$pgdb' para '$pguser'?"
+  entrada "Confirmar? (y/n):"
+  read confirm
+  if [[ "$confirm" == "y" || "$confirm" == "Y" ]]; then
+    info "Concedendo todas as permissões..."
+    sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE $pgdb TO $pguser;"
+    ok "Todas as permissões concedidas em '$pgdb' para '$pguser'!"
+  else
+    aviso "Operação cancelada."
+  fi
+  linha
+  pausar
+  MenuPostgres
+}
+
 DeletarBancoPostgres(){
   titulo "Deletar Banco de Dados PostgreSQL"
   entrada "Nome do banco a deletar:"
@@ -520,11 +637,17 @@ MenuPostgres(){
   sep
   opcao_menu  7 "Criar Usuário"
   opcao_menu  8 "Deletar Usuário"
-  opcao_menu  9 "Criar Banco de Dados"
-  opcao_menu 10 "Deletar Banco de Dados"
-  opcao_menu 11 "Listar Bancos de Dados"
+  opcao_menu  9 "Listar Usuários"
+  opcao_menu 10 "Renomear Usuário"
+  opcao_menu 11 "Alterar Senha do Usuário"
+  opcao_menu 12 "Alterar Permissões do Usuário"
+  opcao_menu 13 "Conceder Todas as Permissões"
   sep
-  opcao_menu 12 "Backup / Restore"
+  opcao_menu 14 "Criar Banco de Dados"
+  opcao_menu 15 "Deletar Banco de Dados"
+  opcao_menu 16 "Listar Bancos de Dados"
+  sep
+  opcao_menu 17 "Backup / Restore"
   echo
   opcao_menu  0 "Voltar ao Menu Principal"
   echo
@@ -532,19 +655,24 @@ MenuPostgres(){
   read opcao
   linha
   case $opcao in
-    1) InstalarPostgres;;
-    2) DesinstalarPostgres;;
-    3) IniciarPostgres;;
-    4) PararPostgres;;
-    5) ReiniciarPostgres;;
-    6) StatusPostgres;;
-    7) CriarUsuarioPostgres;;
-    8) DeletarUsuarioPostgres;;
-    9) CriarBancoDadosPostgres;;
-    10) DeletarBancoPostgres;;
-    11) ListarBancosPostgres;;
-    12) MenuBackupPostgres;;
-    0) Menu;;
+    1)  InstalarPostgres;;
+    2)  DesinstalarPostgres;;
+    3)  IniciarPostgres;;
+    4)  PararPostgres;;
+    5)  ReiniciarPostgres;;
+    6)  StatusPostgres;;
+    7)  CriarUsuarioPostgres;;
+    8)  DeletarUsuarioPostgres;;
+    9)  ListarUsuariosPostgres;;
+    10) RenomearUsuarioPostgres;;
+    11) AlterarSenhaUsuarioPostgres;;
+    12) AlterarPermissoesUsuarioPostgres;;
+    13) GrantAllUsuarioPostgres;;
+    14) CriarBancoDadosPostgres;;
+    15) DeletarBancoPostgres;;
+    16) ListarBancosPostgres;;
+    17) MenuBackupPostgres;;
+    0)  Menu;;
     *) erro "Opção inválida!" ; sleep 1 ; MenuPostgres ;;
   esac
 }

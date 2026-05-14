@@ -189,6 +189,132 @@ ListarUsuariosMySQL(){
   MenuMySQL
 }
 
+RenomearUsuarioMySQL(){
+  titulo "Renomear Usuário MySQL"
+  info "Usuários existentes:"
+  sep
+  _my_exec -e "SELECT User, Host FROM mysql.user WHERE User NOT IN ('root','mysql.sys','mysql.session','mysql.infoschema');"
+  sep
+  entrada "Nome atual do usuário:"
+  read myuser
+  sep
+  entrada "Host do usuário (padrão: localhost):"
+  read myhost
+  [[ -z "$myhost" ]] && myhost="localhost"
+  sep
+  entrada "Novo nome do usuário:"
+  read mynewuser
+  sep
+  info "Renomeando '$myuser'@'$myhost' → '$mynewuser'@'$myhost'..."
+  _my_exec -e "RENAME USER '${myuser}'@'${myhost}' TO '${mynewuser}'@'${myhost}'; FLUSH PRIVILEGES;"
+  ok "Usuário renomeado com sucesso!"
+  linha
+  pausar
+  MenuMySQL
+}
+
+AlterarSenhaUsuarioMySQL(){
+  titulo "Alterar Senha do Usuário MySQL"
+  info "Usuários existentes:"
+  sep
+  _my_exec -e "SELECT User, Host FROM mysql.user WHERE User NOT IN ('root','mysql.sys','mysql.session','mysql.infoschema');"
+  sep
+  entrada "Nome do usuário:"
+  read myuser
+  sep
+  entrada "Host do usuário (padrão: localhost):"
+  read myhost
+  [[ -z "$myhost" ]] && myhost="localhost"
+  sep
+  printf "  ${CIANO}▶  ${AMARELO_CLARO}%s${RESET} " "Nova senha:"
+  read -s mypass
+  echo
+  sep
+  info "Alterando senha de '$myuser'@'$myhost'..."
+  _my_exec -e "ALTER USER '${myuser}'@'${myhost}' IDENTIFIED BY '${mypass}'; FLUSH PRIVILEGES;"
+  ok "Senha alterada com sucesso!"
+  linha
+  pausar
+  MenuMySQL
+}
+
+AlterarPermissoesUsuarioMySQL(){
+  titulo "Alterar Permissões do Usuário MySQL"
+  info "Usuários existentes:"
+  sep
+  _my_exec -e "SELECT User, Host FROM mysql.user WHERE User NOT IN ('root','mysql.sys','mysql.session','mysql.infoschema');"
+  sep
+  entrada "Nome do usuário:"
+  read myuser
+  sep
+  entrada "Host do usuário (padrão: localhost):"
+  read myhost
+  [[ -z "$myhost" ]] && myhost="localhost"
+  sep
+  info "Bancos disponíveis:"
+  _my_exec -e "SHOW DATABASES;" | grep -v "^Database$\|information_schema\|performance_schema\|mysql\|sys"
+  sep
+  entrada "Nome do banco (ou * para todos):"
+  read mydb
+  [[ -z "$mydb" ]] && mydb="*"
+  sep
+  echo "  ${BRANCO}Permissões disponíveis:${RESET}"
+  item "SELECT, INSERT, UPDATE, DELETE, CREATE, DROP, INDEX, ALTER, REFERENCES, TRIGGER"
+  sep
+  entrada "Digite as permissões separadas por vírgula (ex: SELECT,INSERT,UPDATE):"
+  read myperms
+  sep
+  aviso "Revogar permissões anteriores antes de aplicar as novas?"
+  entrada "Revogar tudo antes? (y/n):"
+  read revogar
+  if [[ "$revogar" == "y" || "$revogar" == "Y" ]]; then
+    info "Revogando permissões em '$mydb' para '$myuser'@'$myhost'..."
+    _my_exec -e "REVOKE ALL PRIVILEGES ON ${mydb}.* FROM '${myuser}'@'${myhost}'; FLUSH PRIVILEGES;"
+  fi
+  sep
+  info "Concedendo permissões [$myperms] em '$mydb' para '$myuser'@'$myhost'..."
+  _my_exec -e "GRANT ${myperms} ON ${mydb}.* TO '${myuser}'@'${myhost}'; FLUSH PRIVILEGES;"
+  ok "Permissões atualizadas com sucesso!"
+  linha
+  pausar
+  MenuMySQL
+}
+
+GrantAllUsuarioMySQL(){
+  titulo "Conceder Todas as Permissões — MySQL"
+  info "Usuários existentes:"
+  sep
+  _my_exec -e "SELECT User, Host FROM mysql.user WHERE User NOT IN ('root','mysql.sys','mysql.session','mysql.infoschema');"
+  sep
+  entrada "Nome do usuário:"
+  read myuser
+  sep
+  entrada "Host do usuário (padrão: localhost):"
+  read myhost
+  [[ -z "$myhost" ]] && myhost="localhost"
+  sep
+  info "Bancos disponíveis:"
+  _my_exec -e "SHOW DATABASES;" | grep -v "^Database$\|information_schema\|performance_schema\|mysql\|sys"
+  sep
+  entrada "Nome do banco (ou * para todos os bancos):"
+  read mydb
+  [[ -z "$mydb" ]] && mydb="*"
+  sep
+  aviso "Conceder ALL PRIVILEGES em '$mydb' para '$myuser'@'$myhost'?"
+  entrada "Confirmar? (y/n):"
+  read confirm
+  if [[ "$confirm" == "y" || "$confirm" == "Y" ]]; then
+    info "Concedendo todas as permissões..."
+    _my_exec -e "GRANT ALL PRIVILEGES ON ${mydb}.* TO '${myuser}'@'${myhost}'; FLUSH PRIVILEGES;"
+    ok "Todas as permissões concedidas em '$mydb' para '$myuser'@'$myhost'!"
+  else
+    aviso "Operação cancelada."
+  fi
+  linha
+  pausar
+  MenuMySQL
+}
+
 CriarBancoDadosMySQL(){
   titulo "Criar Banco de Dados MySQL"
   entrada "Nome do banco de dados:"
@@ -583,11 +709,16 @@ MenuMySQL(){
   opcao_menu  8 "Criar Usuário"
   opcao_menu  9 "Deletar Usuário"
   opcao_menu 10 "Listar Usuários"
-  opcao_menu 11 "Criar Banco de Dados"
-  opcao_menu 12 "Deletar Banco de Dados"
-  opcao_menu 13 "Listar Bancos de Dados"
+  opcao_menu 11 "Renomear Usuário"
+  opcao_menu 12 "Alterar Senha do Usuário"
+  opcao_menu 13 "Alterar Permissões do Usuário"
+  opcao_menu 14 "Conceder Todas as Permissões"
   sep
-  opcao_menu 14 "Backup / Restore"
+  opcao_menu 15 "Criar Banco de Dados"
+  opcao_menu 16 "Deletar Banco de Dados"
+  opcao_menu 17 "Listar Bancos de Dados"
+  sep
+  opcao_menu 18 "Backup / Restore"
   echo
   opcao_menu  0 "Voltar ao Menu Principal"
   echo
@@ -605,10 +736,14 @@ MenuMySQL(){
     8)  CriarUsuarioMySQL;;
     9)  DeletarUsuarioMySQL;;
     10) ListarUsuariosMySQL;;
-    11) CriarBancoDadosMySQL;;
-    12) DeletarBancoMySQL;;
-    13) ListarBancosMySQL;;
-    14) MenuBackupMySQL;;
+    11) RenomearUsuarioMySQL;;
+    12) AlterarSenhaUsuarioMySQL;;
+    13) AlterarPermissoesUsuarioMySQL;;
+    14) GrantAllUsuarioMySQL;;
+    15) CriarBancoDadosMySQL;;
+    16) DeletarBancoMySQL;;
+    17) ListarBancosMySQL;;
+    18) MenuBackupMySQL;;
     0)  Menu;;
     *) erro "Opção inválida!" ; sleep 1 ; MenuMySQL ;;
   esac
