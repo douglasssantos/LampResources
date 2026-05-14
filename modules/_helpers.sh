@@ -122,3 +122,68 @@ _selecionar(){
   done
 }
 
+# ─── Seleção múltipla com toggle ─────────────────────────────────────────────
+# Uso: _selecionar_multiplo "Prompt" "PERM1,PERM2" item1 item2 ...
+#   2º argumento: CSV de itens pré-selecionados (pode ser vazio "")
+# Resultado fica em $_SELECIONADOS (CSV) e $_SELECIONADOS_ARR (array)
+_selecionar_multiplo(){
+  local prompt="$1"
+  local presel="$2"
+  shift 2
+  local opcoes=("$@")
+  local total=${#opcoes[@]}
+  local -a marcados=()
+
+  # Inicializar marcados com base em presel
+  local i
+  for (( i=0; i<total; i++ )); do
+    if echo "$presel" | grep -qiw "${opcoes[$i]}"; then
+      marcados[$i]=1
+    else
+      marcados[$i]=0
+    fi
+  done
+
+  local _render_lista(){
+    echo
+    for (( i=0; i<total; i++ )); do
+      if [[ "${marcados[$i]}" -eq 1 ]]; then
+        printf "  ${VERDE_CLARO}[${AMARELO_CLARO}%2d${VERDE_CLARO}] ✔  ${BRANCO}%s${RESET}\n" "$((i+1))" "${opcoes[$i]}"
+      else
+        printf "  ${CINZA}[${AMARELO_CLARO}%2d${CINZA}] ○  ${DIM}%s${RESET}\n" "$((i+1))" "${opcoes[$i]}"
+      fi
+    done
+    echo
+    item "Digite o número para marcar/desmarcar  ${CINZA}|${RESET}  ${AMARELO_CLARO}0${RESET} para confirmar"
+  }
+
+  local escolha
+  while true; do
+    _render_lista
+    entrada "$prompt:"
+    read escolha
+    if [[ "$escolha" == "0" ]]; then
+      break
+    elif [[ "$escolha" =~ ^[0-9]+$ ]] && (( escolha >= 1 && escolha <= total )); then
+      local idx=$(( escolha - 1 ))
+      [[ "${marcados[$idx]}" -eq 1 ]] && marcados[$idx]=0 || marcados[$idx]=1
+    else
+      erro "Opção inválida."
+    fi
+  done
+
+  # Montar resultado
+  _SELECIONADOS=""
+  _SELECIONADOS_ARR=()
+  for (( i=0; i<total; i++ )); do
+    if [[ "${marcados[$i]}" -eq 1 ]]; then
+      _SELECIONADOS_ARR+=("${opcoes[$i]}")
+      if [[ -z "$_SELECIONADOS" ]]; then
+        _SELECIONADOS="${opcoes[$i]}"
+      else
+        _SELECIONADOS="${_SELECIONADOS},${opcoes[$i]}"
+      fi
+    fi
+  done
+}
+

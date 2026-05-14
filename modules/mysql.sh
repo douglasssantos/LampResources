@@ -258,23 +258,50 @@ AlterarPermissoesUsuarioMySQL(){
   local mydb="$_SELECIONADO"
   [[ "$mydb" == "* (Todos os bancos)" ]] && mydb="*"
   sep
-  echo "  ${BRANCO}Permissões disponíveis:${RESET}"
-  item "SELECT, INSERT, UPDATE, DELETE, CREATE, DROP, INDEX, ALTER, REFERENCES, TRIGGER"
-  sep
-  entrada "Digite as permissões separadas por vírgula (ex: SELECT,INSERT,UPDATE):"
-  read myperms
-  sep
-  aviso "Revogar permissões anteriores antes de aplicar as novas?"
-  entrada "Revogar tudo antes? (y/n):"
-  read revogar
-  if [[ "$revogar" == "y" || "$revogar" == "Y" ]]; then
-    info "Revogando permissões em '$mydb' para '$myuser'@'$myhost'..."
-    _my_exec -e "REVOKE ALL PRIVILEGES ON ${mydb}.* FROM '${myuser}'@'${myhost}'; FLUSH PRIVILEGES;"
+
+  # Carregar permissões atuais do usuário neste banco
+  local _grants_raw _grant_line _current_perms
+  _grants_raw=$(_my_exec -e "SHOW GRANTS FOR '${myuser}'@'${myhost}';" 2>/dev/null)
+  if [[ "$mydb" == "*" ]]; then
+    _grant_line=$(echo "$_grants_raw" | grep -i 'ON \*\.\*' | head -1)
+  else
+    _grant_line=$(echo "$_grants_raw" | grep -i "ON \`${mydb}\`\.\*" | head -1)
   fi
+  # Se tiver ALL PRIVILEGES, marcar tudo
+  if echo "$_grant_line" | grep -qi 'ALL PRIVILEGES'; then
+    _current_perms="SELECT,INSERT,UPDATE,DELETE,CREATE,DROP,REFERENCES,INDEX,ALTER,CREATE VIEW,SHOW VIEW,CREATE ROUTINE,ALTER ROUTINE,EXECUTE,CREATE TEMPORARY TABLES,LOCK TABLES,EVENT,TRIGGER"
+  else
+    _current_perms=$(echo "$_grant_line" | sed 's/GRANT //i' | sed 's/ ON .*//i')
+  fi
+
+  info "Marque/desmarque as permissões desejadas para '$myuser'@'$myhost' em '$mydb':"
   sep
-  info "Concedendo permissões [$myperms] em '$mydb' para '$myuser'@'$myhost'..."
-  _my_exec -e "GRANT ${myperms} ON ${mydb}.* TO '${myuser}'@'${myhost}'; FLUSH PRIVILEGES;"
-  ok "Permissões atualizadas com sucesso!"
+  local _todas_perms=(
+    SELECT INSERT UPDATE DELETE CREATE DROP REFERENCES INDEX ALTER
+    "CREATE VIEW" "SHOW VIEW" "CREATE ROUTINE" "ALTER ROUTINE"
+    EXECUTE "CREATE TEMPORARY TABLES" "LOCK TABLES" EVENT TRIGGER
+  )
+  _selecionar_multiplo "Permissão" "$_current_perms" "${_todas_perms[@]}"
+
+  if [[ -z "$_SELECIONADOS" ]]; then
+    sep
+    aviso "Nenhuma permissão selecionada. Revogar todas?"
+    entrada "Confirmar revogação total? (y/n):"
+    read revogar_tudo
+    if [[ "$revogar_tudo" == "y" || "$revogar_tudo" == "Y" ]]; then
+      _my_exec -e "REVOKE ALL PRIVILEGES ON ${mydb}.* FROM '${myuser}'@'${myhost}'; FLUSH PRIVILEGES;"
+      ok "Todas as permissões revogadas em '$mydb' para '$myuser'@'$myhost'!"
+    else
+      aviso "Operação cancelada."
+    fi
+    linha; pausar; MenuMySQL; return
+  fi
+
+  sep
+  info "Aplicando permissões selecionadas em '$mydb' para '$myuser'@'$myhost'..."
+  _my_exec -e "REVOKE ALL PRIVILEGES ON ${mydb}.* FROM '${myuser}'@'${myhost}'; FLUSH PRIVILEGES;"
+  _my_exec -e "GRANT ${_SELECIONADOS} ON ${mydb}.* TO '${myuser}'@'${myhost}'; FLUSH PRIVILEGES;"
+  ok "Permissões atualizadas: ${_SELECIONADOS}"
   linha
   pausar
   MenuMySQL
@@ -668,6 +695,108 @@ RemoverAgendamentoBackupMySQL(){
 }
 
 
+ConexaoRemotaMySQL(){
+  titulo "Conexão Remota — MySQL"
+
+  # ── Detectar arquivo de configuração ──────────────────────────────────────
+  local _conf
+  for f in /etc/mysql/mysql.conf.d/mysqld.cnf /etc/mysql/my.cnf /etc/my.cnf; do
+    [[ -f "$f" ]] && { _conf="$f"; break; }
+  done
+
+  if [[ -z "$_conf" ]]; then
+    erro "Arquivo de configuração do MySQL não encontrado."
+    linha; pausar; MenuMySQL; return
+  fi
+
+  # ── Ler bind-address e porta atuais ──────────────────────────────────────
+  local _bind _porta _ip _remota
+  _bind=$(grep -i '^\s*bind-address' "$_conf" | awk -F'=' '{print $2}' | tr -d ' \t' | tail -1)
+  [[ -z "$_bind" ]] && _bind="127.0.0.1"
+  _porta=$(grep -i '^\s*port' "$_conf" | awk -F'=' '{print $2}' | tr -d ' \t' | tail -1)
+  [[ -z "$_porta" ]] && _porta="3306"
+  _ip=$(hostname -I 2>/dev/null | awk '{print $1}')
+  echo "$_bind" | grep -qE '^(0\.0\.0\.0|::)' && _remota=true || _remota=false
+
+  echo
+  echo "  ${NEGRITO}${BRANCO}Dados de Conexão${RESET}"
+  sep
+  item "Arquivo de config : $_conf"
+  item "bind-address      : $_bind"
+  item "Porta             : $_porta"
+  item "IP do servidor    : ${_ip:-não detectado}"
+  sep
+  if $_remota; then
+    ok   "Conexão remota    : ${VERDE_CLARO}ATIVA${RESET} (aceita conexões externas)"
+    sep
+    echo "  ${BRANCO}String de conexão:${RESET}"
+    item "Host: ${_ip:-<IP_SERVIDOR>}"
+    item "Porta: $_porta"
+    item "Usuário: <usuario>   Senha: <senha>"
+  else
+    aviso "Conexão remota    : ${AMARELO}INATIVA${RESET} (aceita apenas conexões locais)"
+    sep
+    echo "  ${BRANCO}String de conexão (local):${RESET}"
+    item "Host: 127.0.0.1   Porta: $_porta"
+    item "Usuário: <usuario>   Senha: <senha>"
+  fi
+  echo
+  sep
+
+  if $_remota; then
+    opcao_menu 1 "Desativar conexão remota (bind-address=127.0.0.1)"
+  else
+    opcao_menu 1 "Ativar conexão remota (bind-address=0.0.0.0)"
+  fi
+  opcao_menu 0 "Voltar"
+  echo
+  entrada "Escolha:"
+  read _opcao
+  sep
+
+  case $_opcao in
+    1)
+      if $_remota; then
+        info "Desativando conexão remota..."
+        if grep -qi '^\s*bind-address' "$_conf"; then
+          sudo sed -i 's/^\s*bind-address.*/bind-address = 127.0.0.1/' "$_conf"
+        else
+          printf '\nbind-address = 127.0.0.1\n' | sudo tee -a "$_conf" > /dev/null
+        fi
+        ok "Conexão remota desativada."
+      else
+        aviso "Ativar conexão remota expõe o MySQL na rede!"
+        aviso "Certifique-se de usar senhas fortes e firewall adequado."
+        entrada "Confirmar? (y/n):"
+        read _conf_remote
+        if [[ "$_conf_remote" != "y" && "$_conf_remote" != "Y" ]]; then
+          aviso "Operação cancelada."
+          pausar; MenuMySQL; return
+        fi
+        info "Ativando conexão remota..."
+        if grep -qi '^\s*bind-address' "$_conf"; then
+          sudo sed -i 's/^\s*bind-address.*/bind-address = 0.0.0.0/' "$_conf"
+        else
+          printf '\nbind-address = 0.0.0.0\n' | sudo tee -a "$_conf" > /dev/null
+        fi
+        ok "Conexão remota ativada."
+        sep
+        item "Lembre-se: o usuário deve ter host '%' ou o IP remoto nas permissões."
+        item "Ex: GRANT ALL ON banco.* TO 'user'@'%' IDENTIFIED BY 'senha';"
+      fi
+      sep
+      info "Reiniciando MySQL..."
+      sudo systemctl restart mysql.service
+      ok "MySQL reiniciado com sucesso!"
+      ;;
+    *) ;;
+  esac
+
+  linha
+  pausar
+  MenuMySQL
+}
+
 # ── Menu Backup MySQL ───────────────────────────────────────────────────────
 MenuBackupMySQL(){
   cabecalho "MYSQL — BACKUP" "Douglas S. Santos"
@@ -723,7 +852,8 @@ MenuMySQL(){
   opcao_menu 16 "Deletar Banco de Dados"
   opcao_menu 17 "Listar Bancos de Dados"
   sep
-  opcao_menu 18 "Backup / Restore"
+  opcao_menu 18 "Conexão Remota"
+  opcao_menu 19 "Backup / Restore"
   echo
   opcao_menu  0 "Voltar ao Menu Principal"
   echo
@@ -748,7 +878,8 @@ MenuMySQL(){
     15) CriarBancoDadosMySQL;;
     16) DeletarBancoMySQL;;
     17) ListarBancosMySQL;;
-    18) MenuBackupMySQL;;
+    18) ConexaoRemotaMySQL;;
+    19) MenuBackupMySQL;;
     0)  Menu;;
     *) erro "Opção inválida!" ; sleep 1 ; MenuMySQL ;;
   esac

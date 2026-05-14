@@ -536,23 +536,37 @@ AlterarPermissoesUsuarioPostgres(){
   fi
   local pgdb="$_SELECIONADO"
   sep
-  echo "  ${BRANCO}Permissões disponíveis:${RESET}"
-  item "CONNECT, CREATE, TEMPORARY"
+
+  # Carregar permissões atuais do usuário neste banco
+  local _current_perms
+  _current_perms=$(sudo -u postgres psql -tAc \
+    "SELECT string_agg(privilege_type, ',') FROM information_schema.role_database_privileges \
+     WHERE grantee = '${pguser}' AND table_catalog = '${pgdb}';" 2>/dev/null | tr -d ' ')
+
+  info "Marque/desmarque as permissões desejadas para '$pguser' em '$pgdb':"
   sep
-  entrada "Digite as permissões separadas por vírgula (ex: CONNECT,CREATE):"
-  read pgperms
-  sep
-  aviso "Revogar permissões anteriores antes de aplicar as novas?"
-  entrada "Revogar tudo antes? (y/n):"
-  read revogar
-  if [[ "$revogar" == "y" || "$revogar" == "Y" ]]; then
-    info "Revogando permissões em '$pgdb' para '$pguser'..."
-    sudo -u postgres psql -c "REVOKE ALL PRIVILEGES ON DATABASE $pgdb FROM $pguser;"
+  local _todas_perms=(CONNECT CREATE TEMPORARY)
+  _selecionar_multiplo "Permissão" "$_current_perms" "${_todas_perms[@]}"
+
+  if [[ -z "$_SELECIONADOS" ]]; then
+    sep
+    aviso "Nenhuma permissão selecionada. Revogar todas?"
+    entrada "Confirmar revogação total? (y/n):"
+    read revogar_tudo
+    if [[ "$revogar_tudo" == "y" || "$revogar_tudo" == "Y" ]]; then
+      sudo -u postgres psql -c "REVOKE ALL PRIVILEGES ON DATABASE $pgdb FROM $pguser;"
+      ok "Todas as permissões revogadas em '$pgdb' para '$pguser'!"
+    else
+      aviso "Operação cancelada."
+    fi
+    linha; pausar; MenuPostgres; return
   fi
+
   sep
-  info "Concedendo permissões [$pgperms] em '$pgdb' para '$pguser'..."
-  sudo -u postgres psql -c "GRANT $pgperms ON DATABASE $pgdb TO $pguser;"
-  ok "Permissões atualizadas com sucesso!"
+  info "Aplicando permissões selecionadas em '$pgdb' para '$pguser'..."
+  sudo -u postgres psql -c "REVOKE ALL PRIVILEGES ON DATABASE $pgdb FROM $pguser;"
+  sudo -u postgres psql -c "GRANT ${_SELECIONADOS} ON DATABASE $pgdb TO $pguser;"
+  ok "Permissões atualizadas: ${_SELECIONADOS}"
   linha
   pausar
   MenuPostgres
@@ -626,6 +640,128 @@ DeletarBancoPostgres(){
 
 MY_BACKUP_DIR="/var/backups/mysql"
 
+ConexaoRemotaPostgres(){
+  titulo "Conexão Remota — PostgreSQL"
+
+  # ── Detectar postgresql.conf ──────────────────────────────────────────────
+  local _pgconf
+  _pgconf=$(sudo -u postgres psql -tAc "SHOW config_file;" 2>/dev/null | tr -d ' ')
+  if [[ -z "$_pgconf" || ! -f "$_pgconf" ]]; then
+    # fallback por versão
+    _pgconf=$(find /etc/postgresql -name "postgresql.conf" 2>/dev/null | sort -rV | head -1)
+  fi
+
+  # ── Detectar pg_hba.conf ──────────────────────────────────────────────────
+  local _hbaconf
+  _hbaconf=$(sudo -u postgres psql -tAc "SHOW hba_file;" 2>/dev/null | tr -d ' ')
+  if [[ -z "$_hbaconf" || ! -f "$_hbaconf" ]]; then
+    _hbaconf=$(find /etc/postgresql -name "pg_hba.conf" 2>/dev/null | sort -rV | head -1)
+  fi
+
+  if [[ -z "$_pgconf" ]]; then
+    erro "Arquivo postgresql.conf não encontrado."
+    linha; pausar; MenuPostgres; return
+  fi
+
+  # ── Ler listen_addresses e porta ─────────────────────────────────────────
+  local _listen _porta _ip _remota
+  _listen=$(grep -i "^\s*listen_addresses" "$_pgconf" | awk -F"'" '{print $2}' | tr -d ' ' | tail -1)
+  [[ -z "$_listen" ]] && _listen="localhost"
+  _porta=$(grep -i "^\s*port" "$_pgconf" | awk -F'=' '{print $2}' | tr -d ' \t#' | grep -E '^[0-9]+$' | tail -1)
+  [[ -z "$_porta" ]] && _porta="5432"
+  _ip=$(hostname -I 2>/dev/null | awk '{print $1}')
+  echo "$_listen" | grep -qE '(\*|0\.0\.0\.0)' && _remota=true || _remota=false
+
+  echo
+  echo "  ${NEGRITO}${BRANCO}Dados de Conexão${RESET}"
+  sep
+  item "postgresql.conf   : $_pgconf"
+  item "pg_hba.conf       : ${_hbaconf:-não encontrado}"
+  item "listen_addresses  : $_listen"
+  item "Porta             : $_porta"
+  item "IP do servidor    : ${_ip:-não detectado}"
+  sep
+  if $_remota; then
+    ok   "Conexão remota    : ${VERDE_CLARO}ATIVA${RESET} (listen_addresses='$_listen')"
+    sep
+    echo "  ${BRANCO}String de conexão:${RESET}"
+    item "Host: ${_ip:-<IP_SERVIDOR>}"
+    item "Porta: $_porta"
+    item "Usuário: <usuario>   Banco: <banco>"
+  else
+    aviso "Conexão remota    : ${AMARELO}INATIVA${RESET} (aceita apenas conexões locais)"
+    sep
+    echo "  ${BRANCO}String de conexão (local):${RESET}"
+    item "Host: 127.0.0.1   Porta: $_porta"
+    item "Usuário: <usuario>   Banco: <banco>"
+  fi
+  echo
+  sep
+
+  if $_remota; then
+    opcao_menu 1 "Desativar conexão remota (listen_addresses='localhost')"
+  else
+    opcao_menu 1 "Ativar conexão remota (listen_addresses='*')"
+  fi
+  opcao_menu 0 "Voltar"
+  echo
+  entrada "Escolha:"
+  read _opcao
+  sep
+
+  case $_opcao in
+    1)
+      if $_remota; then
+        info "Desativando conexão remota..."
+        if grep -qi "^\s*listen_addresses" "$_pgconf"; then
+          sudo sed -i "s|^\s*listen_addresses.*|listen_addresses = 'localhost'|" "$_pgconf"
+        else
+          printf "\nlisten_addresses = 'localhost'\n" | sudo tee -a "$_pgconf" > /dev/null
+        fi
+        # Remover entradas host remotas do pg_hba.conf
+        if [[ -n "$_hbaconf" ]]; then
+          sudo sed -i '/^host[[:space:]].*0\.0\.0\.0\/0/d' "$_hbaconf"
+          sudo sed -i '/^host[[:space:]].*::\/0/d' "$_hbaconf"
+        fi
+        ok "Conexão remota desativada."
+      else
+        aviso "Ativar conexão remota expõe o PostgreSQL na rede!"
+        aviso "Certifique-se de usar senhas fortes e firewall adequado."
+        entrada "Confirmar? (y/n):"
+        read _conf_remote
+        if [[ "$_conf_remote" != "y" && "$_conf_remote" != "Y" ]]; then
+          aviso "Operação cancelada."
+          pausar; MenuPostgres; return
+        fi
+        info "Ativando conexão remota em postgresql.conf..."
+        if grep -qi "^\s*listen_addresses" "$_pgconf"; then
+          sudo sed -i "s|^\s*listen_addresses.*|listen_addresses = '*'|" "$_pgconf"
+        else
+          printf "\nlisten_addresses = '*'\n" | sudo tee -a "$_pgconf" > /dev/null
+        fi
+        # Adicionar regra no pg_hba.conf se não existir
+        if [[ -n "$_hbaconf" ]]; then
+          if ! grep -q "^host.*0\.0\.0\.0\/0" "$_hbaconf"; then
+            printf '\n# Conexão remota habilitada pelo lamp\nhost    all             all             0.0.0.0/0               md5\nhost    all             all             ::/0                    md5\n' | sudo tee -a "$_hbaconf" > /dev/null
+          fi
+        fi
+        ok "Conexão remota ativada."
+        sep
+        item "Regra adicionada ao pg_hba.conf: host all all 0.0.0.0/0 md5"
+        item "Libere a porta $_porta no firewall: sudo ufw allow $_porta/tcp"
+      fi
+      sep
+      info "Reiniciando PostgreSQL..."
+      sudo systemctl restart postgresql.service
+      ok "PostgreSQL reiniciado com sucesso!"
+      ;;
+    *) ;;
+  esac
+
+  linha
+  pausar
+  MenuPostgres
+}
 
 # ── Menu Backup PostgreSQL ──────────────────────────────────────────────────
 MenuBackupPostgres(){
@@ -681,7 +817,8 @@ MenuPostgres(){
   opcao_menu 15 "Deletar Banco de Dados"
   opcao_menu 16 "Listar Bancos de Dados"
   sep
-  opcao_menu 17 "Backup / Restore"
+  opcao_menu 17 "Conexão Remota"
+  opcao_menu 18 "Backup / Restore"
   echo
   opcao_menu  0 "Voltar ao Menu Principal"
   echo
@@ -705,7 +842,8 @@ MenuPostgres(){
     14) CriarBancoDadosPostgres;;
     15) DeletarBancoPostgres;;
     16) ListarBancosPostgres;;
-    17) MenuBackupPostgres;;
+    17) ConexaoRemotaPostgres;;
+    18) MenuBackupPostgres;;
     0)  Menu;;
     *) erro "Opção inválida!" ; sleep 1 ; MenuPostgres ;;
   esac
