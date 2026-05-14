@@ -587,18 +587,63 @@ GrantAllUsuarioPostgres(){
   sep
   local _bancos
   mapfile -t _bancos < <(sudo -u postgres psql -tAc "SELECT datname FROM pg_database WHERE datistemplate = false AND datname != 'postgres' ORDER BY datname;" 2>/dev/null)
+  _bancos=("* (Todos os bancos)" "${_bancos[@]}")
   if ! _selecionar "Banco" "${_bancos[@]}"; then
     pausar; MenuPostgres; return
   fi
   local pgdb="$_SELECIONADO"
   sep
-  aviso "Conceder ALL PRIVILEGES no banco '$pgdb' para '$pguser'?"
+  if [[ "$pgdb" == "* (Todos os bancos)" ]]; then
+    aviso "Conceder ALL PRIVILEGES em TODOS os bancos para '$pguser'?"
+    entrada "Confirmar? (y/n):"
+    read confirm
+    if [[ "$confirm" == "y" || "$confirm" == "Y" ]]; then
+      info "Concedendo todas as permissões em todos os bancos..."
+      local _todos_bancos
+      mapfile -t _todos_bancos < <(sudo -u postgres psql -tAc "SELECT datname FROM pg_database WHERE datistemplate = false AND datname != 'postgres' ORDER BY datname;" 2>/dev/null)
+      for _db in "${_todos_bancos[@]}"; do
+        sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE $_db TO $pguser;"
+      done
+      ok "Todas as permissões concedidas em todos os bancos para '$pguser'!"
+    else
+      aviso "Operação cancelada."
+    fi
+  else
+    aviso "Conceder ALL PRIVILEGES no banco '$pgdb' para '$pguser'?"
+    entrada "Confirmar? (y/n):"
+    read confirm
+    if [[ "$confirm" == "y" || "$confirm" == "Y" ]]; then
+      info "Concedendo todas as permissões..."
+      sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE $pgdb TO $pguser;"
+      ok "Todas as permissões concedidas em '$pgdb' para '$pguser'!"
+    else
+      aviso "Operação cancelada."
+    fi
+  fi
+  linha
+  pausar
+  MenuPostgres
+}
+
+TornarSuperUsuarioPostgres(){
+  titulo "Tornar Super Usuário — PostgreSQL"
+  info "Selecione o usuário:"
+  sep
+  local _usuarios
+  mapfile -t _usuarios < <(sudo -u postgres psql -tAc "SELECT usename FROM pg_user WHERE usename != 'postgres' ORDER BY usename;" 2>/dev/null)
+  if ! _selecionar "Usuário" "${_usuarios[@]}"; then
+    pausar; MenuPostgres; return
+  fi
+  local pguser="$_SELECIONADO"
+  sep
+  aviso "Conceder privilégios de SUPERUSER a '$pguser'?"
+  aviso "Isso dará ao usuário acesso irrestrito ao servidor!"
   entrada "Confirmar? (y/n):"
   read confirm
   if [[ "$confirm" == "y" || "$confirm" == "Y" ]]; then
-    info "Concedendo todas as permissões..."
-    sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE $pgdb TO $pguser;"
-    ok "Todas as permissões concedidas em '$pgdb' para '$pguser'!"
+    info "Tornando '$pguser' super usuário..."
+    sudo -u postgres psql -c "ALTER USER $pguser WITH SUPERUSER;"
+    ok "Usuário '$pguser' agora é um super usuário!"
   else
     aviso "Operação cancelada."
   fi
@@ -927,13 +972,14 @@ MenuPostgres(){
   opcao_menu 11 "Alterar Senha do Usuário"
   opcao_menu 12 "Alterar Permissões do Usuário"
   opcao_menu 13 "Conceder Todas as Permissões"
+  opcao_menu 14 "Tornar Super Usuário"
   sep
-  opcao_menu 14 "Criar Banco de Dados"
-  opcao_menu 15 "Deletar Banco de Dados"
-  opcao_menu 16 "Listar Bancos de Dados"
+  opcao_menu 15 "Criar Banco de Dados"
+  opcao_menu 16 "Deletar Banco de Dados"
+  opcao_menu 17 "Listar Bancos de Dados"
   sep
-  opcao_menu 17 "Conexão Remota"
-  opcao_menu 18 "Backup / Restore"
+  opcao_menu 18 "Conexão Remota"
+  opcao_menu 19 "Backup / Restore"
   echo
   opcao_menu  0 "Voltar ao Menu Principal"
   echo
@@ -954,11 +1000,12 @@ MenuPostgres(){
     11) AlterarSenhaUsuarioPostgres;;
     12) AlterarPermissoesUsuarioPostgres;;
     13) GrantAllUsuarioPostgres;;
-    14) CriarBancoDadosPostgres;;
-    15) DeletarBancoPostgres;;
-    16) ListarBancosPostgres;;
-    17) ConexaoRemotaPostgres;;
-    18) MenuBackupPostgres;;
+    14) TornarSuperUsuarioPostgres;;
+    15) CriarBancoDadosPostgres;;
+    16) DeletarBancoPostgres;;
+    17) ListarBancosPostgres;;
+    18) ConexaoRemotaPostgres;;
+    19) MenuBackupPostgres;;
     0)  Menu;;
     *) erro "Opção inválida!" ; sleep 1 ; MenuPostgres ;;
   esac

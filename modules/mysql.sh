@@ -345,6 +345,34 @@ GrantAllUsuarioMySQL(){
   MenuMySQL
 }
 
+TornarSuperUsuarioMySQL(){
+  titulo "Tornar Super Usuário — MySQL"
+  info "Selecione o usuário:"
+  sep
+  local _usuarios
+  mapfile -t _usuarios < <(_my_exec -e "SELECT CONCAT(User,'@',Host) FROM mysql.user WHERE User NOT IN ('root','mysql.sys','mysql.session','mysql.infoschema') ORDER BY User;" 2>/dev/null | tail -n +2)
+  if ! _selecionar "Usuário" "${_usuarios[@]}"; then
+    pausar; MenuMySQL; return
+  fi
+  local myuser="${_SELECIONADO%@*}"
+  local myhost="${_SELECIONADO#*@}"
+  sep
+  aviso "Conceder TODOS os privilégios com GRANT OPTION a '$myuser'@'$myhost'?"
+  aviso "Isso tornará o usuário equivalente a um super usuário!"
+  entrada "Confirmar? (y/n):"
+  read confirm
+  if [[ "$confirm" == "y" || "$confirm" == "Y" ]]; then
+    info "Concedendo super privilégios..."
+    _my_exec -e "GRANT ALL PRIVILEGES ON *.* TO '${myuser}'@'${myhost}' WITH GRANT OPTION; FLUSH PRIVILEGES;"
+    ok "Usuário '$myuser'@'$myhost' agora é um super usuário!"
+  else
+    aviso "Operação cancelada."
+  fi
+  linha
+  pausar
+  MenuMySQL
+}
+
 CriarBancoDadosMySQL(){
   titulo "Criar Banco de Dados MySQL"
   entrada "Nome do banco de dados:"
@@ -939,13 +967,14 @@ MenuMySQL(){
   opcao_menu 12 "Alterar Senha do Usuário"
   opcao_menu 13 "Alterar Permissões do Usuário"
   opcao_menu 14 "Conceder Todas as Permissões"
+  opcao_menu 15 "Tornar Super Usuário"
   sep
-  opcao_menu 15 "Criar Banco de Dados"
-  opcao_menu 16 "Deletar Banco de Dados"
-  opcao_menu 17 "Listar Bancos de Dados"
+  opcao_menu 16 "Criar Banco de Dados"
+  opcao_menu 17 "Deletar Banco de Dados"
+  opcao_menu 18 "Listar Bancos de Dados"
   sep
-  opcao_menu 18 "Conexão Remota"
-  opcao_menu 19 "Backup / Restore"
+  opcao_menu 19 "Conexão Remota"
+  opcao_menu 20 "Backup / Restore"
   echo
   opcao_menu  0 "Voltar ao Menu Principal"
   echo
@@ -967,11 +996,12 @@ MenuMySQL(){
     12) AlterarSenhaUsuarioMySQL;;
     13) AlterarPermissoesUsuarioMySQL;;
     14) GrantAllUsuarioMySQL;;
-    15) CriarBancoDadosMySQL;;
-    16) DeletarBancoMySQL;;
-    17) ListarBancosMySQL;;
-    18) ConexaoRemotaMySQL;;
-    19) MenuBackupMySQL;;
+    15) TornarSuperUsuarioMySQL;;
+    16) CriarBancoDadosMySQL;;
+    17) DeletarBancoMySQL;;
+    18) ListarBancosMySQL;;
+    19) ConexaoRemotaMySQL;;
+    20) MenuBackupMySQL;;
     0)  Menu;;
     *) erro "Opção inválida!" ; sleep 1 ; MenuMySQL ;;
   esac
