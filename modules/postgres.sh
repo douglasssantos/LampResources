@@ -673,6 +673,10 @@ ConexaoRemotaPostgres(){
       | grep -v '^#' | grep -v '^\s*$')
   fi
 
+  # ── IP do usuário conectado (SSH) ────────────────────────────────────────
+  local _client_ip
+  _client_ip=$(echo "$SSH_CLIENT" | awk '{print $1}')
+
   # ── Exibir dados de conexão ───────────────────────────────────────────────
   echo
   echo "  ${NEGRITO}${BRANCO}Dados de Conexão${RESET}"
@@ -682,6 +686,11 @@ ConexaoRemotaPostgres(){
   item "listen_addresses  : $_listen"
   item "Porta             : $_porta"
   item "IP do servidor    : ${_ip:-não detectado}"
+  if [[ -n "$_client_ip" ]]; then
+    item "Seu IP (cliente)  : ${VERDE_CLARO}$_client_ip${RESET}  ← adicione este IP para liberar acesso remoto"
+  else
+    item "Seu IP (cliente)  : ${DIM}sessão local (não SSH)${RESET}"
+  fi
   sep
 
   if $_remota; then
