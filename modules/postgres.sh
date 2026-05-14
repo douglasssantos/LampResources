@@ -676,6 +676,8 @@ ConexaoRemotaPostgres(){
   # ── IP do usuário conectado (SSH) ────────────────────────────────────────
   local _client_ip
   _client_ip=$(echo "$SSH_CLIENT" | awk '{print $1}')
+  [[ -z "$_client_ip" ]] && _client_ip=$(echo "$SSH_CONNECTION" | awk '{print $1}')
+  [[ -z "$_client_ip" ]] && _client_ip=$(who am i 2>/dev/null | grep -oP '\(\K[^)]+' | head -1)
 
   # ── Exibir dados de conexão ───────────────────────────────────────────────
   echo
