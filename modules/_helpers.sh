@@ -88,3 +88,37 @@ opcao_menu(){
   printf "  ${CIANO}[${AMARELO_CLARO}%2s${CIANO}]${RESET}  %s\n" "$num" "$desc"
 }
 
+# ─── Seleção interativa de itens ──────────────────────────────────────────────
+# Uso: _selecionar "Prompt" item1 item2 ...
+# Resultado fica em $_SELECIONADO
+_selecionar(){
+  local prompt="$1"
+  shift
+  local opcoes=("$@")
+  local total=${#opcoes[@]}
+
+  if [[ $total -eq 0 ]]; then
+    erro "Nenhum item disponível para seleção."
+    _SELECIONADO=""
+    return 1
+  fi
+
+  echo
+  local i
+  for (( i=0; i<total; i++ )); do
+    printf "  ${CIANO}[${AMARELO_CLARO}%2d${CIANO}]${RESET}  %s\n" "$((i+1))" "${opcoes[$i]}"
+  done
+  echo
+
+  local escolha
+  while true; do
+    entrada "$prompt [1-$total]:"
+    read escolha
+    if [[ "$escolha" =~ ^[0-9]+$ ]] && (( escolha >= 1 && escolha <= total )); then
+      _SELECIONADO="${opcoes[$((escolha-1))]}"
+      return 0
+    fi
+    erro "Opção inválida. Digite um número entre 1 e $total."
+  done
+}
+

@@ -155,16 +155,15 @@ CriarUsuarioMySQL(){
 
 DeletarUsuarioMySQL(){
   titulo "Deletar Usuário MySQL"
-  info "Usuários existentes:"
+  info "Selecione o usuário a deletar:"
   sep
-  _my_exec -e "SELECT User, Host FROM mysql.user WHERE User NOT IN ('root','mysql.sys','mysql.session','mysql.infoschema');"
-  sep
-  entrada "Nome do usuário a deletar:"
-  read myuser
-  sep
-  entrada "Host do usuário (padrão: localhost):"
-  read myhost
-  [[ -z "$myhost" ]] && myhost="localhost"
+  local _usuarios
+  mapfile -t _usuarios < <(_my_exec -e "SELECT CONCAT(User,'@',Host) FROM mysql.user WHERE User NOT IN ('root','mysql.sys','mysql.session','mysql.infoschema') ORDER BY User;" 2>/dev/null | tail -n +2)
+  if ! _selecionar "Usuário" "${_usuarios[@]}"; then
+    pausar; MenuMySQL; return
+  fi
+  local myuser="${_SELECIONADO%@*}"
+  local myhost="${_SELECIONADO#*@}"
   sep
   aviso "Deletar '$myuser'@'$myhost'?"
   entrada "Confirmar? (y/n):"
@@ -191,16 +190,15 @@ ListarUsuariosMySQL(){
 
 RenomearUsuarioMySQL(){
   titulo "Renomear Usuário MySQL"
-  info "Usuários existentes:"
+  info "Selecione o usuário a renomear:"
   sep
-  _my_exec -e "SELECT User, Host FROM mysql.user WHERE User NOT IN ('root','mysql.sys','mysql.session','mysql.infoschema');"
-  sep
-  entrada "Nome atual do usuário:"
-  read myuser
-  sep
-  entrada "Host do usuário (padrão: localhost):"
-  read myhost
-  [[ -z "$myhost" ]] && myhost="localhost"
+  local _usuarios
+  mapfile -t _usuarios < <(_my_exec -e "SELECT CONCAT(User,'@',Host) FROM mysql.user WHERE User NOT IN ('root','mysql.sys','mysql.session','mysql.infoschema') ORDER BY User;" 2>/dev/null | tail -n +2)
+  if ! _selecionar "Usuário" "${_usuarios[@]}"; then
+    pausar; MenuMySQL; return
+  fi
+  local myuser="${_SELECIONADO%@*}"
+  local myhost="${_SELECIONADO#*@}"
   sep
   entrada "Novo nome do usuário:"
   read mynewuser
@@ -215,16 +213,15 @@ RenomearUsuarioMySQL(){
 
 AlterarSenhaUsuarioMySQL(){
   titulo "Alterar Senha do Usuário MySQL"
-  info "Usuários existentes:"
+  info "Selecione o usuário:"
   sep
-  _my_exec -e "SELECT User, Host FROM mysql.user WHERE User NOT IN ('root','mysql.sys','mysql.session','mysql.infoschema');"
-  sep
-  entrada "Nome do usuário:"
-  read myuser
-  sep
-  entrada "Host do usuário (padrão: localhost):"
-  read myhost
-  [[ -z "$myhost" ]] && myhost="localhost"
+  local _usuarios
+  mapfile -t _usuarios < <(_my_exec -e "SELECT CONCAT(User,'@',Host) FROM mysql.user WHERE User NOT IN ('root','mysql.sys','mysql.session','mysql.infoschema') ORDER BY User;" 2>/dev/null | tail -n +2)
+  if ! _selecionar "Usuário" "${_usuarios[@]}"; then
+    pausar; MenuMySQL; return
+  fi
+  local myuser="${_SELECIONADO%@*}"
+  local myhost="${_SELECIONADO#*@}"
   sep
   printf "  ${CIANO}▶  ${AMARELO_CLARO}%s${RESET} " "Nova senha:"
   read -s mypass
@@ -240,23 +237,26 @@ AlterarSenhaUsuarioMySQL(){
 
 AlterarPermissoesUsuarioMySQL(){
   titulo "Alterar Permissões do Usuário MySQL"
-  info "Usuários existentes:"
+  info "Selecione o usuário:"
   sep
-  _my_exec -e "SELECT User, Host FROM mysql.user WHERE User NOT IN ('root','mysql.sys','mysql.session','mysql.infoschema');"
+  local _usuarios
+  mapfile -t _usuarios < <(_my_exec -e "SELECT CONCAT(User,'@',Host) FROM mysql.user WHERE User NOT IN ('root','mysql.sys','mysql.session','mysql.infoschema') ORDER BY User;" 2>/dev/null | tail -n +2)
+  if ! _selecionar "Usuário" "${_usuarios[@]}"; then
+    pausar; MenuMySQL; return
+  fi
+  local myuser="${_SELECIONADO%@*}"
+  local myhost="${_SELECIONADO#*@}"
   sep
-  entrada "Nome do usuário:"
-  read myuser
+  info "Selecione o banco de dados:"
   sep
-  entrada "Host do usuário (padrão: localhost):"
-  read myhost
-  [[ -z "$myhost" ]] && myhost="localhost"
-  sep
-  info "Bancos disponíveis:"
-  _my_exec -e "SHOW DATABASES;" | grep -v "^Database$\|information_schema\|performance_schema\|mysql\|sys"
-  sep
-  entrada "Nome do banco (ou * para todos):"
-  read mydb
-  [[ -z "$mydb" ]] && mydb="*"
+  local _bancos
+  mapfile -t _bancos < <(_my_exec -e "SHOW DATABASES;" 2>/dev/null | grep -v "^Database$\|information_schema\|performance_schema\|mysql\|sys")
+  _bancos=("* (Todos os bancos)" "${_bancos[@]}")
+  if ! _selecionar "Banco" "${_bancos[@]}"; then
+    pausar; MenuMySQL; return
+  fi
+  local mydb="$_SELECIONADO"
+  [[ "$mydb" == "* (Todos os bancos)" ]] && mydb="*"
   sep
   echo "  ${BRANCO}Permissões disponíveis:${RESET}"
   item "SELECT, INSERT, UPDATE, DELETE, CREATE, DROP, INDEX, ALTER, REFERENCES, TRIGGER"
@@ -282,23 +282,26 @@ AlterarPermissoesUsuarioMySQL(){
 
 GrantAllUsuarioMySQL(){
   titulo "Conceder Todas as Permissões — MySQL"
-  info "Usuários existentes:"
+  info "Selecione o usuário:"
   sep
-  _my_exec -e "SELECT User, Host FROM mysql.user WHERE User NOT IN ('root','mysql.sys','mysql.session','mysql.infoschema');"
+  local _usuarios
+  mapfile -t _usuarios < <(_my_exec -e "SELECT CONCAT(User,'@',Host) FROM mysql.user WHERE User NOT IN ('root','mysql.sys','mysql.session','mysql.infoschema') ORDER BY User;" 2>/dev/null | tail -n +2)
+  if ! _selecionar "Usuário" "${_usuarios[@]}"; then
+    pausar; MenuMySQL; return
+  fi
+  local myuser="${_SELECIONADO%@*}"
+  local myhost="${_SELECIONADO#*@}"
   sep
-  entrada "Nome do usuário:"
-  read myuser
+  info "Selecione o banco de dados:"
   sep
-  entrada "Host do usuário (padrão: localhost):"
-  read myhost
-  [[ -z "$myhost" ]] && myhost="localhost"
-  sep
-  info "Bancos disponíveis:"
-  _my_exec -e "SHOW DATABASES;" | grep -v "^Database$\|information_schema\|performance_schema\|mysql\|sys"
-  sep
-  entrada "Nome do banco (ou * para todos os bancos):"
-  read mydb
-  [[ -z "$mydb" ]] && mydb="*"
+  local _bancos
+  mapfile -t _bancos < <(_my_exec -e "SHOW DATABASES;" 2>/dev/null | grep -v "^Database$\|information_schema\|performance_schema\|mysql\|sys")
+  _bancos=("* (Todos os bancos)" "${_bancos[@]}")
+  if ! _selecionar "Banco" "${_bancos[@]}"; then
+    pausar; MenuMySQL; return
+  fi
+  local mydb="$_SELECIONADO"
+  [[ "$mydb" == "* (Todos os bancos)" ]] && mydb="*"
   sep
   aviso "Conceder ALL PRIVILEGES em '$mydb' para '$myuser'@'$myhost'?"
   entrada "Confirmar? (y/n):"
@@ -346,12 +349,14 @@ CriarBancoDadosMySQL(){
 
 DeletarBancoMySQL(){
   titulo "Deletar Banco de Dados MySQL"
-  info "Bancos disponíveis:"
+  info "Selecione o banco a deletar:"
   sep
-  _my_exec -e "SHOW DATABASES;" | grep -v "^Database$\|information_schema\|performance_schema\|mysql\|sys"
-  sep
-  entrada "Nome do banco a deletar:"
-  read mydb
+  local _bancos
+  mapfile -t _bancos < <(_my_exec -e "SHOW DATABASES;" 2>/dev/null | grep -v "^Database$\|information_schema\|performance_schema\|mysql\|sys")
+  if ! _selecionar "Banco" "${_bancos[@]}"; then
+    pausar; MenuMySQL; return
+  fi
+  local mydb="$_SELECIONADO"
   sep
   aviso "Esta operação é IRREVERSÍVEL! O banco '$mydb' será apagado."
   entrada "Confirmar? (y/n):"

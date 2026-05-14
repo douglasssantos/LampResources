@@ -438,12 +438,26 @@ RemoverAgendamentoBackup(){
 }
 DeletarUsuarioPostgres(){
   titulo "Deletar Usuário PostgreSQL"
-  entrada "Nome do usuário a deletar:"
-  read pguser
+  info "Selecione o usuário a deletar:"
   sep
-  info "Deletando usuário $pguser..."
-  sudo -u postgres psql -c "DROP USER IF EXISTS $pguser;"
-  ok "Usuário $pguser deletado!"
+  local _usuarios
+  mapfile -t _usuarios < <(sudo -u postgres psql -tAc "SELECT usename FROM pg_user WHERE usename != 'postgres' ORDER BY usename;" 2>/dev/null)
+  if ! _selecionar "Usuário" "${_usuarios[@]}"; then
+    pausar; MenuPostgres; return
+  fi
+  local pguser="$_SELECIONADO"
+  sep
+  aviso "Deletar usuário '$pguser'?"
+  entrada "Confirmar? (y/n):"
+  read confirm
+  sep
+  if [[ "$confirm" == "y" || "$confirm" == "Y" ]]; then
+    info "Deletando usuário $pguser..."
+    sudo -u postgres psql -c "DROP USER IF EXISTS $pguser;"
+    ok "Usuário $pguser deletado!"
+  else
+    aviso "Operação cancelada."
+  fi
   linha
   pausar
   MenuPostgres
@@ -459,12 +473,14 @@ ListarUsuariosPostgres(){
 
 RenomearUsuarioPostgres(){
   titulo "Renomear Usuário PostgreSQL"
-  info "Usuários existentes:"
+  info "Selecione o usuário a renomear:"
   sep
-  sudo -u postgres psql -c "\du"
-  sep
-  entrada "Nome atual do usuário:"
-  read pguser
+  local _usuarios
+  mapfile -t _usuarios < <(sudo -u postgres psql -tAc "SELECT usename FROM pg_user WHERE usename != 'postgres' ORDER BY usename;" 2>/dev/null)
+  if ! _selecionar "Usuário" "${_usuarios[@]}"; then
+    pausar; MenuPostgres; return
+  fi
+  local pguser="$_SELECIONADO"
   sep
   entrada "Novo nome do usuário:"
   read pgnewuser
@@ -479,12 +495,14 @@ RenomearUsuarioPostgres(){
 
 AlterarSenhaUsuarioPostgres(){
   titulo "Alterar Senha do Usuário PostgreSQL"
-  info "Usuários existentes:"
+  info "Selecione o usuário:"
   sep
-  sudo -u postgres psql -c "\du"
-  sep
-  entrada "Nome do usuário:"
-  read pguser
+  local _usuarios
+  mapfile -t _usuarios < <(sudo -u postgres psql -tAc "SELECT usename FROM pg_user WHERE usename != 'postgres' ORDER BY usename;" 2>/dev/null)
+  if ! _selecionar "Usuário" "${_usuarios[@]}"; then
+    pausar; MenuPostgres; return
+  fi
+  local pguser="$_SELECIONADO"
   sep
   printf "  ${CIANO}▶  ${AMARELO_CLARO}%s${RESET} " "Nova senha:"
   read -s pgpass
@@ -500,18 +518,23 @@ AlterarSenhaUsuarioPostgres(){
 
 AlterarPermissoesUsuarioPostgres(){
   titulo "Alterar Permissões do Usuário PostgreSQL"
-  info "Usuários existentes:"
+  info "Selecione o usuário:"
   sep
-  sudo -u postgres psql -c "\du"
+  local _usuarios
+  mapfile -t _usuarios < <(sudo -u postgres psql -tAc "SELECT usename FROM pg_user WHERE usename != 'postgres' ORDER BY usename;" 2>/dev/null)
+  if ! _selecionar "Usuário" "${_usuarios[@]}"; then
+    pausar; MenuPostgres; return
+  fi
+  local pguser="$_SELECIONADO"
   sep
-  entrada "Nome do usuário:"
-  read pguser
+  info "Selecione o banco de dados:"
   sep
-  info "Bancos disponíveis:"
-  sudo -u postgres psql -c "\l" 2>/dev/null
-  sep
-  entrada "Nome do banco:"
-  read pgdb
+  local _bancos
+  mapfile -t _bancos < <(sudo -u postgres psql -tAc "SELECT datname FROM pg_database WHERE datistemplate = false AND datname != 'postgres' ORDER BY datname;" 2>/dev/null)
+  if ! _selecionar "Banco" "${_bancos[@]}"; then
+    pausar; MenuPostgres; return
+  fi
+  local pgdb="$_SELECIONADO"
   sep
   echo "  ${BRANCO}Permissões disponíveis:${RESET}"
   item "CONNECT, CREATE, TEMPORARY"
@@ -537,18 +560,23 @@ AlterarPermissoesUsuarioPostgres(){
 
 GrantAllUsuarioPostgres(){
   titulo "Conceder Todas as Permissões — PostgreSQL"
-  info "Usuários existentes:"
+  info "Selecione o usuário:"
   sep
-  sudo -u postgres psql -c "\du"
+  local _usuarios
+  mapfile -t _usuarios < <(sudo -u postgres psql -tAc "SELECT usename FROM pg_user WHERE usename != 'postgres' ORDER BY usename;" 2>/dev/null)
+  if ! _selecionar "Usuário" "${_usuarios[@]}"; then
+    pausar; MenuPostgres; return
+  fi
+  local pguser="$_SELECIONADO"
   sep
-  entrada "Nome do usuário:"
-  read pguser
+  info "Selecione o banco de dados:"
   sep
-  info "Bancos disponíveis:"
-  sudo -u postgres psql -c "\l" 2>/dev/null
-  sep
-  entrada "Nome do banco:"
-  read pgdb
+  local _bancos
+  mapfile -t _bancos < <(sudo -u postgres psql -tAc "SELECT datname FROM pg_database WHERE datistemplate = false AND datname != 'postgres' ORDER BY datname;" 2>/dev/null)
+  if ! _selecionar "Banco" "${_bancos[@]}"; then
+    pausar; MenuPostgres; return
+  fi
+  local pgdb="$_SELECIONADO"
   sep
   aviso "Conceder ALL PRIVILEGES no banco '$pgdb' para '$pguser'?"
   entrada "Confirmar? (y/n):"
@@ -567,10 +595,16 @@ GrantAllUsuarioPostgres(){
 
 DeletarBancoPostgres(){
   titulo "Deletar Banco de Dados PostgreSQL"
-  entrada "Nome do banco a deletar:"
-  read pgdb
+  info "Selecione o banco a deletar:"
   sep
-  aviso "Esta operação é IRREVERSÍVEL! O banco $pgdb será apagado."
+  local _bancos
+  mapfile -t _bancos < <(sudo -u postgres psql -tAc "SELECT datname FROM pg_database WHERE datistemplate = false AND datname != 'postgres' ORDER BY datname;" 2>/dev/null)
+  if ! _selecionar "Banco" "${_bancos[@]}"; then
+    pausar; MenuPostgres; return
+  fi
+  local pgdb="$_SELECIONADO"
+  sep
+  aviso "Esta operação é IRREVERSÍVEL! O banco '$pgdb' será apagado."
   entrada "Confirmar? (y/n):"
   read confirm
   sep
