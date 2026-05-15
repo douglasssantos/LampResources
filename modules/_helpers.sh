@@ -144,7 +144,7 @@ _selecionar_multiplo(){
     fi
   done
 
-  local _render_lista(){
+  _render_lista(){
     echo
     for (( i=0; i<total; i++ )); do
       if [[ "${marcados[$i]}" -eq 1 ]]; then
