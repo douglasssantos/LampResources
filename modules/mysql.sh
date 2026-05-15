@@ -267,21 +267,40 @@ AlterarPermissoesUsuarioMySQL(){
   else
     _grant_line=$(echo "$_grants_raw" | grep -i "ON \`${mydb}\`\.\*" | head -1)
   fi
-  # Se tiver ALL PRIVILEGES, marcar tudo
-  if echo "$_grant_line" | grep -qi 'ALL PRIVILEGES'; then
-    _current_perms="SELECT,INSERT,UPDATE,DELETE,CREATE,DROP,REFERENCES,INDEX,ALTER,CREATE VIEW,SHOW VIEW,CREATE ROUTINE,ALTER ROUTINE,EXECUTE,CREATE TEMPORARY TABLES,LOCK TABLES,EVENT,TRIGGER"
-  else
-    _current_perms=$(echo "$_grant_line" | sed 's/GRANT //i' | sed 's/ ON .*//i')
-  fi
 
-  info "Marque/desmarque as permissões desejadas para '$myuser'@'$myhost' em '$mydb':"
-  sep
-  local _todas_perms=(
+  local _perms_db=(
     SELECT INSERT UPDATE DELETE CREATE DROP REFERENCES INDEX ALTER
     "CREATE VIEW" "SHOW VIEW" "CREATE ROUTINE" "ALTER ROUTINE"
     EXECUTE "CREATE TEMPORARY TABLES" "LOCK TABLES" EVENT TRIGGER
   )
-  _selecionar_multiplo "Permissão" "$_current_perms" "${_todas_perms[@]}"
+  local _perms_global=(
+    SELECT INSERT UPDATE DELETE CREATE DROP REFERENCES INDEX ALTER
+    "CREATE VIEW" "SHOW VIEW" "CREATE ROUTINE" "ALTER ROUTINE"
+    EXECUTE "CREATE TEMPORARY TABLES" "LOCK TABLES" EVENT TRIGGER
+    FILE SUPER PROCESS RELOAD SHUTDOWN
+    "REPLICATION CLIENT" "REPLICATION SLAVE"
+    "SHOW DATABASES" "CREATE USER" "CREATE TABLESPACE" "GRANT OPTION"
+  )
+
+  if [[ "$mydb" == "*" ]]; then
+    if echo "$_grant_line" | grep -qi 'ALL PRIVILEGES'; then
+      _current_perms="SELECT,INSERT,UPDATE,DELETE,CREATE,DROP,REFERENCES,INDEX,ALTER,CREATE VIEW,SHOW VIEW,CREATE ROUTINE,ALTER ROUTINE,EXECUTE,CREATE TEMPORARY TABLES,LOCK TABLES,EVENT,TRIGGER,FILE,SUPER,PROCESS,RELOAD,SHUTDOWN,REPLICATION CLIENT,REPLICATION SLAVE,SHOW DATABASES,CREATE USER,CREATE TABLESPACE,GRANT OPTION"
+    else
+      _current_perms=$(echo "$_grant_line" | sed 's/GRANT //i' | sed 's/ ON .*//i')
+    fi
+    info "Marque/desmarque as permissões (nível global) para '$myuser'@'$myhost':"
+    sep
+    _selecionar_multiplo "Permissão" "$_current_perms" "${_perms_global[@]}"
+  else
+    if echo "$_grant_line" | grep -qi 'ALL PRIVILEGES'; then
+      _current_perms="SELECT,INSERT,UPDATE,DELETE,CREATE,DROP,REFERENCES,INDEX,ALTER,CREATE VIEW,SHOW VIEW,CREATE ROUTINE,ALTER ROUTINE,EXECUTE,CREATE TEMPORARY TABLES,LOCK TABLES,EVENT,TRIGGER"
+    else
+      _current_perms=$(echo "$_grant_line" | sed 's/GRANT //i' | sed 's/ ON .*//i')
+    fi
+    info "Marque/desmarque as permissões para '$myuser'@'$myhost' em '$mydb':"
+    sep
+    _selecionar_multiplo "Permissão" "$_current_perms" "${_perms_db[@]}"
+  fi
 
   if [[ -z "$_SELECIONADOS" ]]; then
     sep
@@ -965,13 +984,13 @@ MenuMySQL(){
   opcao_menu 10 "Listar Usuários"
   opcao_menu 11 "Renomear Usuário"
   opcao_menu 12 "Alterar Senha do Usuário"
-  opcao_menu 13 "Alterar Permissões do Usuário"
-  opcao_menu 14 "Conceder Todas as Permissões"
   opcao_menu 15 "Tornar Super Usuário"
   sep
   opcao_menu 16 "Criar Banco de Dados"
   opcao_menu 17 "Deletar Banco de Dados"
   opcao_menu 18 "Listar Bancos de Dados"
+  opcao_menu 13 "Alterar Permissões do Usuário"
+  opcao_menu 14 "Conceder Todas as Permissões"
   sep
   opcao_menu 19 "Conexão Remota"
   opcao_menu 20 "Backup / Restore"

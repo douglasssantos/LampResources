@@ -652,6 +652,151 @@ TornarSuperUsuarioPostgres(){
   MenuPostgres
 }
 
+AlterarPermissoesSchemaPostgres(){
+  titulo "Permissões no Schema — PostgreSQL"
+  info "Selecione o usuário:"
+  sep
+  local _usuarios
+  mapfile -t _usuarios < <(sudo -u postgres psql -tAc "SELECT usename FROM pg_user WHERE usename != 'postgres' ORDER BY usename;" 2>/dev/null)
+  if ! _selecionar "Usuário" "${_usuarios[@]}"; then
+    pausar; MenuPostgres; return
+  fi
+  local pguser="$_SELECIONADO"
+  sep
+  info "Selecione o banco de dados:"
+  sep
+  local _bancos
+  mapfile -t _bancos < <(sudo -u postgres psql -tAc "SELECT datname FROM pg_database WHERE datistemplate = false AND datname != 'postgres' ORDER BY datname;" 2>/dev/null)
+  if ! _selecionar "Banco" "${_bancos[@]}"; then
+    pausar; MenuPostgres; return
+  fi
+  local pgdb="$_SELECIONADO"
+  sep
+  info "Selecione o schema:"
+  sep
+  local _schemas
+  mapfile -t _schemas < <(sudo -u postgres psql -d "$pgdb" -tAc "SELECT nspname FROM pg_namespace WHERE nspname NOT LIKE 'pg_%' AND nspname != 'information_schema' ORDER BY nspname;" 2>/dev/null)
+  if ! _selecionar "Schema" "${_schemas[@]}"; then
+    pausar; MenuPostgres; return
+  fi
+  local pgschema="$_SELECIONADO"
+  sep
+
+  # Verificar permissões atuais no schema
+  local _has_usage _has_create _current_perms=""
+  _has_usage=$(sudo -u postgres psql -d "$pgdb" -tAc "SELECT has_schema_privilege('${pguser}', '${pgschema}', 'USAGE');" 2>/dev/null | tr -d ' \n')
+  _has_create=$(sudo -u postgres psql -d "$pgdb" -tAc "SELECT has_schema_privilege('${pguser}', '${pgschema}', 'CREATE');" 2>/dev/null | tr -d ' \n')
+  [[ "$_has_usage" == "t" ]] && _current_perms="USAGE"
+  [[ "$_has_create" == "t" ]] && _current_perms="${_current_perms:+${_current_perms},}CREATE"
+
+  info "Marque/desmarque as permissões no schema '$pgschema' para '$pguser':"
+  sep
+  local _todas_perms=(USAGE CREATE)
+  _selecionar_multiplo "Permissão" "$_current_perms" "${_todas_perms[@]}"
+
+  if [[ -z "$_SELECIONADOS" ]]; then
+    sep
+    aviso "Nenhuma permissão selecionada. Revogar todas no schema?"
+    entrada "Confirmar revogação total? (y/n):"
+    read revogar_tudo
+    if [[ "$revogar_tudo" == "y" || "$revogar_tudo" == "Y" ]]; then
+      sudo -u postgres psql -d "$pgdb" -c "REVOKE ALL ON SCHEMA $pgschema FROM $pguser;"
+      ok "Todas as permissões revogadas no schema '$pgschema' para '$pguser'!"
+    else
+      aviso "Operação cancelada."
+    fi
+    linha; pausar; MenuPostgres; return
+  fi
+
+  sep
+  info "Aplicando permissões no schema '$pgschema' para '$pguser'..."
+  sudo -u postgres psql -d "$pgdb" -c "REVOKE ALL ON SCHEMA $pgschema FROM $pguser;"
+  sudo -u postgres psql -d "$pgdb" -c "GRANT ${_SELECIONADOS} ON SCHEMA $pgschema TO $pguser;"
+  ok "Permissões no schema atualizadas: ${_SELECIONADOS}"
+  linha
+  pausar
+  MenuPostgres
+}
+
+AlterarPermissoesTabelasPostgres(){
+  titulo "Permissões em Tabelas e Sequences — PostgreSQL"
+  info "Selecione o usuário:"
+  sep
+  local _usuarios
+  mapfile -t _usuarios < <(sudo -u postgres psql -tAc "SELECT usename FROM pg_user WHERE usename != 'postgres' ORDER BY usename;" 2>/dev/null)
+  if ! _selecionar "Usuário" "${_usuarios[@]}"; then
+    pausar; MenuPostgres; return
+  fi
+  local pguser="$_SELECIONADO"
+  sep
+  info "Selecione o banco de dados:"
+  sep
+  local _bancos
+  mapfile -t _bancos < <(sudo -u postgres psql -tAc "SELECT datname FROM pg_database WHERE datistemplate = false AND datname != 'postgres' ORDER BY datname;" 2>/dev/null)
+  if ! _selecionar "Banco" "${_bancos[@]}"; then
+    pausar; MenuPostgres; return
+  fi
+  local pgdb="$_SELECIONADO"
+  sep
+  info "Selecione o schema:"
+  sep
+  local _schemas
+  mapfile -t _schemas < <(sudo -u postgres psql -d "$pgdb" -tAc "SELECT nspname FROM pg_namespace WHERE nspname NOT LIKE 'pg_%' AND nspname != 'information_schema' ORDER BY nspname;" 2>/dev/null)
+  if ! _selecionar "Schema" "${_schemas[@]}"; then
+    pausar; MenuPostgres; return
+  fi
+  local pgschema="$_SELECIONADO"
+  sep
+
+  # ── Permissões nas tabelas ──────────────────────────────────────────────────
+  info "Selecione as permissões nas TABELAS do schema '$pgschema':"
+  sep
+  local _perms_tabelas=(SELECT INSERT UPDATE DELETE TRUNCATE REFERENCES TRIGGER)
+  local _current_tabelas=""
+  local _p
+  for _p in SELECT INSERT UPDATE DELETE TRUNCATE REFERENCES TRIGGER; do
+    local _has
+    _has=$(sudo -u postgres psql -d "$pgdb" -tAc \
+      "SELECT bool_or(privilege_type = '${_p}') FROM information_schema.role_table_grants \
+       WHERE grantee = '${pguser}' AND table_schema = '${pgschema}';" 2>/dev/null | tr -d ' \n')
+    [[ "$_has" == "t" ]] && _current_tabelas="${_current_tabelas:+${_current_tabelas},}${_p}"
+  done
+  _selecionar_multiplo "Tabelas" "$_current_tabelas" "${_perms_tabelas[@]}"
+  local _selecionados_tabelas="$_SELECIONADOS"
+  sep
+
+  # ── Permissões nas sequences ────────────────────────────────────────────────
+  info "Selecione as permissões nas SEQUENCES do schema '$pgschema':"
+  sep
+  local _perms_seq=(USAGE SELECT UPDATE)
+  _selecionar_multiplo "Sequences" "" "${_perms_seq[@]}"
+  local _selecionados_seq="$_SELECIONADOS"
+  sep
+
+  # ── Aplicar ─────────────────────────────────────────────────────────────────
+  info "Aplicando permissões em '$pgschema' para '$pguser'..."
+  sudo -u postgres psql -d "$pgdb" -c "REVOKE ALL ON ALL TABLES IN SCHEMA $pgschema FROM $pguser;"
+  sudo -u postgres psql -d "$pgdb" -c "REVOKE ALL ON ALL SEQUENCES IN SCHEMA $pgschema FROM $pguser;"
+
+  if [[ -n "$_selecionados_tabelas" ]]; then
+    sudo -u postgres psql -d "$pgdb" -c "GRANT ${_selecionados_tabelas} ON ALL TABLES IN SCHEMA $pgschema TO $pguser;"
+    ok "Tabelas: ${_selecionados_tabelas}"
+  else
+    aviso "Nenhuma permissão concedida nas tabelas."
+  fi
+
+  if [[ -n "$_selecionados_seq" ]]; then
+    sudo -u postgres psql -d "$pgdb" -c "GRANT ${_selecionados_seq} ON ALL SEQUENCES IN SCHEMA $pgschema TO $pguser;"
+    ok "Sequences: ${_selecionados_seq}"
+  else
+    aviso "Nenhuma permissão concedida nas sequences."
+  fi
+
+  linha
+  pausar
+  MenuPostgres
+}
+
 DeletarBancoPostgres(){
   titulo "Deletar Banco de Dados PostgreSQL"
   info "Selecione o banco a deletar:"
@@ -970,16 +1115,18 @@ MenuPostgres(){
   opcao_menu  9 "Listar Usuários"
   opcao_menu 10 "Renomear Usuário"
   opcao_menu 11 "Alterar Senha do Usuário"
-  opcao_menu 12 "Alterar Permissões do Usuário"
-  opcao_menu 13 "Conceder Todas as Permissões"
-  opcao_menu 14 "Tornar Super Usuário"
+  opcao_menu 16 "Tornar Super Usuário"
   sep
-  opcao_menu 15 "Criar Banco de Dados"
-  opcao_menu 16 "Deletar Banco de Dados"
-  opcao_menu 17 "Listar Bancos de Dados"
+  opcao_menu 17 "Criar Banco de Dados"
+  opcao_menu 18 "Deletar Banco de Dados"
+  opcao_menu 19 "Listar Bancos de Dados"
+  opcao_menu 12 "Alterar Permissões do Usuário (banco)"
+  opcao_menu 13 "Alterar Permissões no Schema"
+  opcao_menu 14 "Alterar Permissões em Tabelas e Sequences"
+  opcao_menu 15 "Conceder Todas as Permissões"
   sep
-  opcao_menu 18 "Conexão Remota"
-  opcao_menu 19 "Backup / Restore"
+  opcao_menu 20 "Conexão Remota"
+  opcao_menu 21 "Backup / Restore"
   echo
   opcao_menu  0 "Voltar ao Menu Principal"
   echo
@@ -999,13 +1146,15 @@ MenuPostgres(){
     10) RenomearUsuarioPostgres;;
     11) AlterarSenhaUsuarioPostgres;;
     12) AlterarPermissoesUsuarioPostgres;;
-    13) GrantAllUsuarioPostgres;;
-    14) TornarSuperUsuarioPostgres;;
-    15) CriarBancoDadosPostgres;;
-    16) DeletarBancoPostgres;;
-    17) ListarBancosPostgres;;
-    18) ConexaoRemotaPostgres;;
-    19) MenuBackupPostgres;;
+    13) AlterarPermissoesSchemaPostgres;;
+    14) AlterarPermissoesTabelasPostgres;;
+    15) GrantAllUsuarioPostgres;;
+    16) TornarSuperUsuarioPostgres;;
+    17) CriarBancoDadosPostgres;;
+    18) DeletarBancoPostgres;;
+    19) ListarBancosPostgres;;
+    20) ConexaoRemotaPostgres;;
+    21) MenuBackupPostgres;;
     0)  Menu;;
     *) erro "Opção inválida!" ; sleep 1 ; MenuPostgres ;;
   esac
