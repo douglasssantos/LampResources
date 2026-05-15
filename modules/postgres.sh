@@ -676,6 +676,42 @@ TornarSuperUsuarioPostgres(){
   MenuPostgres
 }
 
+VincularUsuarioAoBancoPostgres(){
+  titulo "Vincular Usuário ao Banco — PostgreSQL"
+  info "Selecione o usuário:"
+  sep
+  local _usuarios
+  mapfile -t _usuarios < <(sudo -u postgres psql -tAc "SELECT usename FROM pg_user WHERE usename != 'postgres' ORDER BY usename;" 2>/dev/null)
+  if ! _selecionar "Usuário" "${_usuarios[@]}"; then
+    pausar; MenuPostgres; return
+  fi
+  local pguser="$_SELECIONADO"
+  sep
+  info "Selecione o banco de dados:"
+  sep
+  local _bancos
+  mapfile -t _bancos < <(sudo -u postgres psql -tAc "SELECT datname FROM pg_database WHERE datistemplate = false AND datname != 'postgres' ORDER BY datname;" 2>/dev/null)
+  if ! _selecionar "Banco" "${_bancos[@]}"; then
+    pausar; MenuPostgres; return
+  fi
+  local pgdb="$_SELECIONADO"
+  sep
+  aviso "Vincular '$pguser' ao banco '$pgdb'?"
+  aviso "Inclui permissões em todos os níveis: banco, schemas, tabelas, sequences e funções."
+  entrada "Confirmar? (y/n):"
+  read confirm
+  if [[ "$confirm" == "y" || "$confirm" == "Y" ]]; then
+    info "Vinculando usuário ao banco..."
+    _pg_grant_all_no_banco "$pgdb" "$pguser"
+    ok "Usuário '$pguser' vinculado ao banco '$pgdb'!"
+  else
+    aviso "Operação cancelada."
+  fi
+  linha
+  pausar
+  MenuPostgres
+}
+
 AlterarPermissoesSchemaPostgres(){
   titulo "Permissões no Schema — PostgreSQL"
   info "Selecione o usuário:"
@@ -1139,18 +1175,19 @@ MenuPostgres(){
   opcao_menu  9 "Listar Usuários"
   opcao_menu 10 "Renomear Usuário"
   opcao_menu 11 "Alterar Senha do Usuário"
-  opcao_menu 16 "Tornar Super Usuário"
+  opcao_menu 12 "Tornar Super Usuário"
   sep
-  opcao_menu 17 "Criar Banco de Dados"
-  opcao_menu 18 "Deletar Banco de Dados"
-  opcao_menu 19 "Listar Bancos de Dados"
-  opcao_menu 12 "Alterar Permissões do Usuário (banco)"
-  opcao_menu 13 "Alterar Permissões no Schema"
-  opcao_menu 14 "Alterar Permissões em Tabelas e Sequences"
-  opcao_menu 15 "Conceder Todas as Permissões"
+  opcao_menu 13 "Criar Banco de Dados"
+  opcao_menu 14 "Deletar Banco de Dados"
+  opcao_menu 15 "Listar Bancos de Dados"
+  opcao_menu 16 "Vincular Usuário ao Banco"
+  opcao_menu 17 "Alterar Permissões do Usuário (banco)"
+  opcao_menu 18 "Alterar Permissões no Schema"
+  opcao_menu 19 "Alterar Permissões em Tabelas e Sequences"
+  opcao_menu 20 "Conceder Todas as Permissões"
   sep
-  opcao_menu 20 "Conexão Remota"
-  opcao_menu 21 "Backup / Restore"
+  opcao_menu 21 "Conexão Remota"
+  opcao_menu 22 "Backup / Restore"
   echo
   opcao_menu  0 "Voltar ao Menu Principal"
   echo
@@ -1169,16 +1206,20 @@ MenuPostgres(){
     9)  ListarUsuariosPostgres;;
     10) RenomearUsuarioPostgres;;
     11) AlterarSenhaUsuarioPostgres;;
-    12) AlterarPermissoesUsuarioPostgres;;
-    13) AlterarPermissoesSchemaPostgres;;
-    14) AlterarPermissoesTabelasPostgres;;
-    15) GrantAllUsuarioPostgres;;
-    16) TornarSuperUsuarioPostgres;;
-    17) CriarBancoDadosPostgres;;
-    18) DeletarBancoPostgres;;
-    19) ListarBancosPostgres;;
-    20) ConexaoRemotaPostgres;;
-    21) MenuBackupPostgres;;
+    12) TornarSuperUsuarioPostgres;;
+
+    13) CriarBancoDadosPostgres;;
+    14) DeletarBancoPostgres;;
+    15) ListarBancosPostgres;;
+    16) VincularUsuarioAoBancoPostgres;;
+
+    17) AlterarPermissoesUsuarioPostgres;;
+    18) AlterarPermissoesSchemaPostgres;;
+    19) AlterarPermissoesTabelasPostgres;;
+    20) GrantAllUsuarioPostgres;;
+
+    21) ConexaoRemotaPostgres;;
+    22) MenuBackupPostgres;;
     0)  Menu;;
     *) erro "Opção inválida!" ; sleep 1 ; MenuPostgres ;;
   esac

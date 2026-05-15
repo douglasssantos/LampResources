@@ -392,6 +392,42 @@ TornarSuperUsuarioMySQL(){
   MenuMySQL
 }
 
+VincularUsuarioAoBancoMySQL(){
+  titulo "Vincular Usuário ao Banco — MySQL"
+  info "Selecione o usuário:"
+  sep
+  local _usuarios
+  mapfile -t _usuarios < <(_my_exec -e "SELECT CONCAT(User,'@',Host) FROM mysql.user WHERE User NOT IN ('root','mysql.sys','mysql.session','mysql.infoschema') ORDER BY User;" 2>/dev/null | tail -n +2)
+  if ! _selecionar "Usuário" "${_usuarios[@]}"; then
+    pausar; MenuMySQL; return
+  fi
+  local myuser="${_SELECIONADO%@*}"
+  local myhost="${_SELECIONADO#*@}"
+  sep
+  info "Selecione o banco de dados:"
+  sep
+  local _bancos
+  mapfile -t _bancos < <(_my_exec -e "SHOW DATABASES;" 2>/dev/null | grep -v "^Database$\|information_schema\|performance_schema\|mysql\|sys")
+  if ! _selecionar "Banco" "${_bancos[@]}"; then
+    pausar; MenuMySQL; return
+  fi
+  local mydb="$_SELECIONADO"
+  sep
+  aviso "Vincular '$myuser'@'$myhost' ao banco '$mydb' com ALL PRIVILEGES?"
+  entrada "Confirmar? (y/n):"
+  read confirm
+  if [[ "$confirm" == "y" || "$confirm" == "Y" ]]; then
+    info "Vinculando usuário ao banco..."
+    _my_exec -e "GRANT ALL PRIVILEGES ON \`${mydb}\`.* TO '${myuser}'@'${myhost}'; FLUSH PRIVILEGES;"
+    ok "Usuário '$myuser'@'$myhost' vinculado ao banco '$mydb'!"
+  else
+    aviso "Operação cancelada."
+  fi
+  linha
+  pausar
+  MenuMySQL
+}
+
 CriarBancoDadosMySQL(){
   titulo "Criar Banco de Dados MySQL"
   entrada "Nome do banco de dados:"
@@ -984,16 +1020,17 @@ MenuMySQL(){
   opcao_menu 10 "Listar Usuários"
   opcao_menu 11 "Renomear Usuário"
   opcao_menu 12 "Alterar Senha do Usuário"
-  opcao_menu 15 "Tornar Super Usuário"
+  opcao_menu 13 "Tornar Super Usuário"
   sep
-  opcao_menu 16 "Criar Banco de Dados"
-  opcao_menu 17 "Deletar Banco de Dados"
-  opcao_menu 18 "Listar Bancos de Dados"
-  opcao_menu 13 "Alterar Permissões do Usuário"
-  opcao_menu 14 "Conceder Todas as Permissões"
+  opcao_menu 14 "Criar Banco de Dados"
+  opcao_menu 15 "Deletar Banco de Dados"
+  opcao_menu 16 "Listar Bancos de Dados"
+  opcao_menu 17 "Vincular Usuário ao Banco"
+  opcao_menu 18 "Alterar Permissões do Usuário"
+  opcao_menu 19 "Conceder Todas as Permissões"
   sep
-  opcao_menu 19 "Conexão Remota"
-  opcao_menu 20 "Backup / Restore"
+  opcao_menu 20 "Conexão Remota"
+  opcao_menu 21 "Backup / Restore"
   echo
   opcao_menu  0 "Voltar ao Menu Principal"
   echo
@@ -1013,14 +1050,15 @@ MenuMySQL(){
     10) ListarUsuariosMySQL;;
     11) RenomearUsuarioMySQL;;
     12) AlterarSenhaUsuarioMySQL;;
-    13) AlterarPermissoesUsuarioMySQL;;
-    14) GrantAllUsuarioMySQL;;
-    15) TornarSuperUsuarioMySQL;;
-    16) CriarBancoDadosMySQL;;
-    17) DeletarBancoMySQL;;
-    18) ListarBancosMySQL;;
-    19) ConexaoRemotaMySQL;;
-    20) MenuBackupMySQL;;
+    13) TornarSuperUsuarioMySQL;;
+    14) CriarBancoDadosMySQL;;
+    15) DeletarBancoMySQL;;
+    16) ListarBancosMySQL;;
+    17) VincularUsuarioAoBancoMySQL;;
+    18) AlterarPermissoesUsuarioMySQL;;
+    19) GrantAllUsuarioMySQL;;
+    20) ConexaoRemotaMySQL;;
+    21) MenuBackupMySQL;;
     0)  Menu;;
     *) erro "Opção inválida!" ; sleep 1 ; MenuMySQL ;;
   esac
