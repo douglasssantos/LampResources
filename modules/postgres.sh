@@ -572,6 +572,28 @@ AlterarPermissoesUsuarioPostgres(){
   MenuPostgres
 }
 
+# Concede ALL em todos os níveis de um banco: DATABASE + todos os schemas + tabelas + sequences + funções + DEFAULT PRIVILEGES
+_pg_grant_all_no_banco(){
+  local _db="$1"
+  local _user="$2"
+
+  sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE $_db TO $_user;"
+
+  local _schemas
+  mapfile -t _schemas < <(sudo -u postgres psql -d "$_db" -tAc \
+    "SELECT nspname FROM pg_namespace WHERE nspname NOT LIKE 'pg_%' AND nspname != 'information_schema' ORDER BY nspname;" 2>/dev/null)
+
+  for _sch in "${_schemas[@]}"; do
+    sudo -u postgres psql -d "$_db" -c "GRANT ALL ON SCHEMA $_sch TO $_user;"
+    sudo -u postgres psql -d "$_db" -c "GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA $_sch TO $_user;"
+    sudo -u postgres psql -d "$_db" -c "GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA $_sch TO $_user;"
+    sudo -u postgres psql -d "$_db" -c "GRANT ALL PRIVILEGES ON ALL FUNCTIONS IN SCHEMA $_sch TO $_user;"
+    sudo -u postgres psql -d "$_db" -c "ALTER DEFAULT PRIVILEGES IN SCHEMA $_sch GRANT ALL ON TABLES TO $_user;"
+    sudo -u postgres psql -d "$_db" -c "ALTER DEFAULT PRIVILEGES IN SCHEMA $_sch GRANT ALL ON SEQUENCES TO $_user;"
+    sudo -u postgres psql -d "$_db" -c "ALTER DEFAULT PRIVILEGES IN SCHEMA $_sch GRANT ALL ON FUNCTIONS TO $_user;"
+  done
+}
+
 GrantAllUsuarioPostgres(){
   titulo "Conceder Todas as Permissões — PostgreSQL"
   info "Selecione o usuário:"
@@ -595,14 +617,15 @@ GrantAllUsuarioPostgres(){
   sep
   if [[ "$pgdb" == "* (Todos os bancos)" ]]; then
     aviso "Conceder ALL PRIVILEGES em TODOS os bancos para '$pguser'?"
+    aviso "Inclui: banco, schemas, tabelas, sequences, funções e DEFAULT PRIVILEGES."
     entrada "Confirmar? (y/n):"
     read confirm
     if [[ "$confirm" == "y" || "$confirm" == "Y" ]]; then
-      info "Concedendo todas as permissões em todos os bancos..."
       local _todos_bancos
       mapfile -t _todos_bancos < <(sudo -u postgres psql -tAc "SELECT datname FROM pg_database WHERE datistemplate = false AND datname != 'postgres' ORDER BY datname;" 2>/dev/null)
       for _db in "${_todos_bancos[@]}"; do
-        sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE $_db TO $pguser;"
+        info "Aplicando em '$_db'..."
+        _pg_grant_all_no_banco "$_db" "$pguser"
       done
       ok "Todas as permissões concedidas em todos os bancos para '$pguser'!"
     else
@@ -610,11 +633,12 @@ GrantAllUsuarioPostgres(){
     fi
   else
     aviso "Conceder ALL PRIVILEGES no banco '$pgdb' para '$pguser'?"
+    aviso "Inclui: banco, schemas, tabelas, sequences, funções e DEFAULT PRIVILEGES."
     entrada "Confirmar? (y/n):"
     read confirm
     if [[ "$confirm" == "y" || "$confirm" == "Y" ]]; then
-      info "Concedendo todas as permissões..."
-      sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE $pgdb TO $pguser;"
+      info "Concedendo todas as permissões em '$pgdb'..."
+      _pg_grant_all_no_banco "$pgdb" "$pguser"
       ok "Todas as permissões concedidas em '$pgdb' para '$pguser'!"
     else
       aviso "Operação cancelada."
