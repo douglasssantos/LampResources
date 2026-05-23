@@ -113,6 +113,12 @@ Com ele você gerencia todo o seu ambiente de desenvolvimento e produção a par
 
 ## 🚀 Instalação
 
+### Automática - Utilizando Curl (recomendado)
+
+```bash
+curl -L https://github.com/douglasssantos/LampResources/archive/refs/heads/main.zip -o lamp.zip && unzip lamp.zip && cd LampResources-main && sudo bash install
+```
+
 ```bash
 # 1. Clone o repositório
 git clone https://github.com/douglasssantos/LampResources.git
