@@ -33,12 +33,31 @@ Com ele você gerencia todo o seu ambiente de desenvolvimento e produção a par
 | **Backup de sites** (`.tar.gz` com timestamp) | **Restaurar backups de sites** |
 | Ver logs de erro e acesso do Apache | Redefinir configurações do Apache |
 
+### 🟩 Nginx / LEMP
+| | |
+|---|---|
+| Instalar / Desinstalar o LEMP completo | Adicionar domínios online com SSL automático (Certbot) |
+| Adicionar domínios locais de desenvolvimento | Remover server blocks do Nginx |
+| Aplicar permissões em domínios | Renovar certificados SSL |
+| Clonar / Limpar sites | Listar domínios e sites habilitados |
+| **Backup de sites** (`.tar.gz` com timestamp) | **Restaurar backups de sites** |
+| Ver logs de erro e acesso do Nginx | Redefinir configurações do Nginx |
+
 ### 🐘 PHP
 | | |
 |---|---|
 | Instalar versão específica ou mais recente | Listar versões instaladas |
 | Habilitar / Desabilitar versões | Desinstalar versões |
 | Adicionar PPA `ondrej/php` | **Configurar `php.ini`** (memory, upload, timeout) |
+
+### ⚙️ PHP-FPM
+| | |
+|---|---|
+| Instalar / Desinstalar PHP-FPM por versão | Iniciar / Parar / Reiniciar / Status |
+| Listar versões e sockets | Habilitar versão (atualiza sites do Nginx) |
+| Informações do pool e do serviço | Testar configuração (`php-fpm -t`) |
+| Configurar `php.ini` do FPM | Configurar pool `www.conf` (pm, children) |
+| Ver logs do PHP-FPM | — |
 
 ### 🟢 Node.js
 | | |
@@ -101,9 +120,9 @@ Com ele você gerencia todo o seu ambiente de desenvolvimento e produção a par
 ### 🖥️ Sistema
 | | |
 |---|---|
-| Informações do servidor (SO, CPU, RAM, disco, IP) | Status de todos os serviços (Apache, PostgreSQL, MySQL, MongoDB, Redis) |
+| Informações do servidor (SO, CPU, RAM, disco, IP) | Status de todos os serviços (Apache, Nginx, PHP-FPM, PostgreSQL, MySQL, MongoDB, Redis) |
 | Atualizar o sistema (`apt upgrade`) | Ver portas em uso |
-| Limpar logs do Apache | — |
+| Limpar logs do Apache e do Nginx | — |
 
 ### 🔧 Outros
 - Instalar **Composer**
@@ -169,7 +188,9 @@ LampResources/
 └── modules/              # Módulos funcionais
     ├── _helpers.sh       # Cores, helpers visuais e funções utilitárias
     ├── apache.sh         # Apache, LAMP, domínios, SSL, logs, backup de sites
+    ├── nginx.sh          # Nginx, LEMP, domínios, SSL, logs, backup de sites
     ├── php.sh            # PHP (versões, módulos, php.ini, Composer)
+    ├── phpfpm.sh         # PHP-FPM (serviço, pool, php.ini, logs)
     ├── node.sh           # Node.js (NVM, versões, npm) e Git clone
     ├── postgres.sh       # PostgreSQL (serviço, usuários, bancos, backup)
     ├── mysql.sh          # MySQL (serviço, usuários, bancos, backup)

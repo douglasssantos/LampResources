@@ -13,12 +13,14 @@ MODULES_DST="/usr/local/lib/lamp/modules"
 MODULES_LIST=(
   _helpers
   php
+  phpfpm
   redis
   postgres
   mysql
   mongodb
   sistema
   apache
+  nginx
   node
 )
 

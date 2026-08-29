@@ -21,7 +21,9 @@ InformacoesServidor(){
   sep
   info "Versões Instaladas:"
   item "Apache:     $(apache2 -v 2>/dev/null | head -1 || echo 'não instalado')"
+  item "Nginx:      $(nginx -v 2>&1 || echo 'não instalado')"
   item "PHP:        $(php -v 2>/dev/null | head -1 || echo 'não instalado')"
+  item "PHP-FPM:    $(php-fpm$(php -r 'echo PHP_MAJOR_VERSION.".".PHP_MINOR_VERSION;' 2>/dev/null) -v 2>/dev/null | head -1 || echo 'não instalado')"
   item "Node:       $(node -v 2>/dev/null || echo 'não instalado')"
   item "NPM:        $(npm -v 2>/dev/null || echo 'não instalado')"
   item "Composer:   $(composer --version 2>/dev/null | head -1 || echo 'não instalado')"
@@ -58,6 +60,9 @@ VerServicosAtivos(){
   titulo "Status dos Serviços do Stack"
   echo
   apache_status=$(sudo systemctl is-active apache2 2>/dev/null)
+  nginx_status=$(sudo systemctl is-active nginx 2>/dev/null)
+  fpm_ver=$(php -r 'echo PHP_MAJOR_VERSION.".".PHP_MINOR_VERSION;' 2>/dev/null)
+  fpm_status=$(sudo systemctl is-active "php${fpm_ver}-fpm" 2>/dev/null)
   pg_status=$(sudo systemctl is-active postgresql 2>/dev/null)
   my_status=$(sudo systemctl is-active mysql 2>/dev/null)
   mongo_status=$(sudo systemctl is-active mongod 2>/dev/null)
@@ -67,6 +72,18 @@ VerServicosAtivos(){
     ok "Apache:      ATIVO"
   else
     erro "Apache:      INATIVO"
+  fi
+  if [[ "$nginx_status" == "active" ]]; then
+    ok "Nginx:       ATIVO"
+  else
+    erro "Nginx:       INATIVO"
+  fi
+  if [[ -n "$fpm_ver" ]]; then
+    if [[ "$fpm_status" == "active" ]]; then
+      ok "PHP-FPM:     ATIVO ($fpm_ver)"
+    else
+      erro "PHP-FPM:     INATIVO ($fpm_ver)"
+    fi
   fi
   if [[ "$pg_status" == "active" ]]; then
     ok "PostgreSQL:  ATIVO"
@@ -93,15 +110,22 @@ VerServicosAtivos(){
   MenuSistema
 }
 LimparLogsSistema(){
-  titulo "Limpar Logs do Apache"
-  aviso "Os arquivos error.log e access.log serão zerados."
+  titulo "Limpar Logs do Servidor Web"
+  aviso "Os arquivos error.log e access.log do Apache e/ou Nginx serão zerados."
   entrada "Confirmar? (y/n):"
   read confirm
   sep
   if [[ "$confirm" == "y" || "$confirm" == "Y" ]]; then
-    sudo truncate -s 0 /var/log/apache2/error.log
-    sudo truncate -s 0 /var/log/apache2/access.log
-    ok "Logs do Apache limpos!"
+    if [[ -f /var/log/apache2/error.log ]]; then
+      sudo truncate -s 0 /var/log/apache2/error.log
+      sudo truncate -s 0 /var/log/apache2/access.log
+      ok "Logs do Apache limpos!"
+    fi
+    if [[ -f /var/log/nginx/error.log ]]; then
+      sudo truncate -s 0 /var/log/nginx/error.log
+      sudo truncate -s 0 /var/log/nginx/access.log
+      ok "Logs do Nginx limpos!"
+    fi
   else
     aviso "Operação cancelada."
   fi
@@ -114,10 +138,10 @@ LimparLogsSistema(){
 MenuSistema(){
   cabecalho "SISTEMA" "Douglas S. Santos"
   opcao_menu 1 "Informações do Servidor"
-  opcao_menu 2 "Status dos Serviços (Apache / PostgreSQL / MySQL / MongoDB / Redis)"
+  opcao_menu 2 "Status dos Serviços (Apache / Nginx / PHP-FPM / PostgreSQL / MySQL / MongoDB / Redis)"
   opcao_menu 3 "Atualizar Sistema"
   opcao_menu 4 "Portas em Uso"
-  opcao_menu 5 "Limpar Logs do Apache"
+  opcao_menu 5 "Limpar Logs do Servidor Web"
   echo
   opcao_menu 0 "Voltar ao Menu Principal"
   echo

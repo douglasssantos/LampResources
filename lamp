@@ -24,12 +24,14 @@ fi
 _lamp_modules=(
   _helpers
   php
+  phpfpm
   redis
   postgres
   mysql
   mongodb
   sistema
   apache
+  nginx
   node
 )
 
@@ -60,18 +62,20 @@ Sair() {
 Menu(){
   cabecalho "LAMP RESOURCES" "Douglas S. Santos  •  douglassantos2127@gmail.com"
   opcao_menu 1 "Apache / LAMP"
-  opcao_menu 2 "PHP"
-  opcao_menu 3 "Node.js"
+  opcao_menu 2 "Nginx / LEMP"
+  opcao_menu 3 "PHP"
+  opcao_menu 4 "PHP-FPM"
+  opcao_menu 5 "Node.js"
   sep
-  opcao_menu 4 "PostgreSQL"
-  opcao_menu 5 "MySQL"
-  opcao_menu 6 "MongoDB"
-  opcao_menu 7 "Redis"
+  opcao_menu 6 "PostgreSQL"
+  opcao_menu 7 "MySQL"
+  opcao_menu 8 "MongoDB"
+  opcao_menu 9 "Redis"
   sep
-  opcao_menu 8 "Sistema"
+  opcao_menu 10 "Sistema"
   sep
-  opcao_menu 9 "Instalar Composer"
-  opcao_menu 10 "Clonar Repositório Git"
+  opcao_menu 11 "Instalar Composer"
+  opcao_menu 12 "Clonar Repositório Git"
   echo
   opcao_menu 0 "Sair"
   echo
@@ -80,15 +84,17 @@ Menu(){
   linha
   case $opcao in
     1) MenuApache;;
-    2) MenuPHP;;
-    3) MenuNode;;
-    4) MenuPostgres;;
-    5) MenuMySQL;;
-    6) MenuMongoDB;;
-    7) MenuRedis;;
-    8) MenuSistema;;
-    9) InstalarComposer;;
-    10) ClonarRepositorioGit;;
+    2) MenuNginx;;
+    3) MenuPHP;;
+    4) MenuPhpFpm;;
+    5) MenuNode;;
+    6) MenuPostgres;;
+    7) MenuMySQL;;
+    8) MenuMongoDB;;
+    9) MenuRedis;;
+    10) MenuSistema;;
+    11) InstalarComposer;;
+    12) ClonarRepositorioGit;;
     0) Sair;;
     *) erro "Opção inválida!" ; sleep 1 ; Menu ;;
   esac

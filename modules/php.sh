@@ -1,4 +1,66 @@
 # ── PHP ─────────────────────────────────────────────────────────────────────
+_php_versao_atual(){
+  php -r 'echo PHP_MAJOR_VERSION.".".PHP_MINOR_VERSION;' 2>/dev/null
+}
+
+_php_reiniciar_servidores(){
+  if systemctl cat apache2.service &>/dev/null; then
+    info "Reiniciando Apache..."
+    sudo systemctl restart apache2 2>/dev/null || true
+  fi
+  if systemctl cat nginx.service &>/dev/null; then
+    local v
+    v=$(_php_versao_atual)
+    info "Reiniciando Nginx..."
+    sudo systemctl restart nginx 2>/dev/null || true
+    if [[ -n "$v" ]]; then
+      sudo systemctl restart "php${v}-fpm" 2>/dev/null || true
+    fi
+  fi
+}
+
+_php_instalar_sapi(){
+  local v="$1"
+  if ja_instalado apache2; then
+    if [[ -n "$v" ]]; then
+      sudo apt install -y "libapache2-mod-php${v}"
+    else
+      sudo apt install -y libapache2-mod-php
+    fi
+  fi
+  if ja_instalado nginx; then
+    if [[ -n "$v" ]]; then
+      sudo apt install -y "php${v}-fpm"
+      sudo systemctl enable "php${v}-fpm"
+      sudo systemctl start "php${v}-fpm"
+    else
+      sudo apt install -y php-fpm
+    fi
+  fi
+}
+
+_php_ativar_versao_web(){
+  local v="$1"
+  if ja_instalado apache2; then
+    local mod
+    for mod in /etc/apache2/mods-enabled/php*.load; do
+      [[ -f "$mod" ]] || continue
+      sudo a2dismod "$(basename "$mod" .load)" 2>/dev/null || true
+    done
+    sudo apt install -y "libapache2-mod-php${v}"
+    sudo a2enmod "php${v}" 2>/dev/null || true
+  fi
+  if ja_instalado nginx; then
+    sudo apt install -y "php${v}-fpm"
+    sudo systemctl enable "php${v}-fpm"
+    sudo systemctl start "php${v}-fpm"
+    if [[ -d /etc/nginx/sites-available ]]; then
+      local sock="/run/php/php${v}-fpm.sock"
+      sudo sed -i "s|fastcgi_pass unix:/run/php/php[0-9.]*-fpm.sock;|fastcgi_pass unix:${sock};|g" /etc/nginx/sites-available/* 2>/dev/null || true
+    fi
+  fi
+}
+
 adicionarRepoPhp(){
   titulo "Repositório PHP (ondrej/php)"
   info "Instalando software-properties-common..."
@@ -45,13 +107,13 @@ InstalarVersaoPhp(){
     php${vPHP}-tidy php${vPHP}-xmlrpc php${vPHP}-xsl \
     php${vPHP}-opcache php${vPHP}-zip php${vPHP}-pgsql 2>/dev/null
   sudo phpenmod pdo_pgsql 2>/dev/null || true
+  _php_instalar_sapi "$vPHP"
   ok "Módulos instalados!"
 
   passo 4 $TOTAL "Finalizar"
   info "Limpando resíduos..."
   sudo apt autoclean -y && sudo apt --purge autoremove -y
-  info "Reiniciando Apache..."
-  sudo systemctl restart apache2
+  _php_reiniciar_servidores
 
   local duracao=$((SECONDS - inicio))
   linha
@@ -83,6 +145,7 @@ InstalarVersaoPhpLamp(){
     php${vPHP}-tidy php${vPHP}-xmlrpc php${vPHP}-xsl \
     php${vPHP}-opcache php${vPHP}-zip php${vPHP}-pgsql 2>/dev/null
   sudo phpenmod pdo_pgsql 2>/dev/null || true
+  _php_instalar_sapi "$vPHP"
   ok "PHP $vPHP e módulos instalados!"
 }
 
@@ -109,13 +172,13 @@ InstalarUltimaVersaoPhp(){
     php-tidy php-xmlrpc php-xsl \
     php-opcache php-zip php-pgsql 2>/dev/null
   sudo phpenmod pdo_pgsql 2>/dev/null || true
+  _php_instalar_sapi "$vPHP"
   ok "Módulos instalados!"
 
   passo 4 $TOTAL "Finalizar"
   info "Limpando resíduos..."
   sudo apt autoclean -y && sudo apt --purge autoremove -y
-  info "Reiniciando Apache..."
-  sudo systemctl restart apache2
+  _php_reiniciar_servidores
 
   local duracao=$((SECONDS - inicio))
   linha
@@ -139,6 +202,8 @@ UsarOutraVersaoPHP(){
   sep
   info "Habilitando PHP $vPHP..."
   sudo update-alternatives --set php /usr/bin/php$vPHP
+  _php_ativar_versao_web "$vPHP"
+  _php_reiniciar_servidores
   ok "PHP $vPHP habilitado com sucesso!"
   linha
   pausar
@@ -177,10 +242,21 @@ InstalarComposer(){
 # ── Configurar php.ini ──────────────────────────────────────────────────────
 ConfigurarPhpIni(){
   titulo "Configurar php.ini"
-  vphp=$(php -v 2>/dev/null | head -1 | grep -oP '\d+\.\d+' | head -1)
-  phpini="/etc/php/$vphp/apache2/php.ini"
+  vphp=$(_php_versao_atual)
+  local arquivos=()
+  [[ -f "/etc/php/$vphp/apache2/php.ini" ]] && arquivos+=("/etc/php/$vphp/apache2/php.ini")
+  [[ -f "/etc/php/$vphp/fpm/php.ini" ]] && arquivos+=("/etc/php/$vphp/fpm/php.ini")
+  [[ ${#arquivos[@]} -eq 0 && -f "/etc/php/$vphp/cli/php.ini" ]] && arquivos+=("/etc/php/$vphp/cli/php.ini")
   info "PHP detectado: $vphp"
-  item "Arquivo: $phpini"
+  if [[ ${#arquivos[@]} -eq 0 ]]; then
+    erro "Nenhum php.ini encontrado para a versão $vphp."
+    pausar
+    MenuPHP
+    return
+  fi
+  for phpini in "${arquivos[@]}"; do
+    item "Arquivo: $phpini"
+  done
   sep
   info "Valores atuais:"
   item "memory_limit:         $(grep "^memory_limit" $phpini 2>/dev/null | awk '{print $3}')"
@@ -197,14 +273,16 @@ ConfigurarPhpIni(){
   entrada "max_execution_time (ex: 300) [ENTER para manter]:"
   read val_exec
   sep
-  [[ -n "$val_memory" ]] && sudo sed -i "s/^memory_limit.*/memory_limit = $val_memory/" $phpini && ok "memory_limit → $val_memory"
-  [[ -n "$val_upload" ]] && sudo sed -i "s/^upload_max_filesize.*/upload_max_filesize = $val_upload/" $phpini && ok "upload_max_filesize → $val_upload"
-  [[ -n "$val_post"   ]] && sudo sed -i "s/^post_max_size.*/post_max_size = $val_post/" $phpini && ok "post_max_size → $val_post"
-  [[ -n "$val_exec"   ]] && sudo sed -i "s/^max_execution_time.*/max_execution_time = $val_exec/" $phpini && ok "max_execution_time → $val_exec"
+  local phpini
+  for phpini in "${arquivos[@]}"; do
+    [[ -n "$val_memory" ]] && sudo sed -i "s/^memory_limit.*/memory_limit = $val_memory/" "$phpini" && ok "memory_limit → $val_memory  ($phpini)"
+    [[ -n "$val_upload" ]] && sudo sed -i "s/^upload_max_filesize.*/upload_max_filesize = $val_upload/" "$phpini" && ok "upload_max_filesize → $val_upload  ($phpini)"
+    [[ -n "$val_post"   ]] && sudo sed -i "s/^post_max_size.*/post_max_size = $val_post/" "$phpini" && ok "post_max_size → $val_post  ($phpini)"
+    [[ -n "$val_exec"   ]] && sudo sed -i "s/^max_execution_time.*/max_execution_time = $val_exec/" "$phpini" && ok "max_execution_time → $val_exec  ($phpini)"
+  done
   sep
-  info "Reiniciando Apache..."
-  sudo systemctl restart apache2
-  ok "Apache reiniciado! Configurações aplicadas."
+  _php_reiniciar_servidores
+  ok "Configurações aplicadas."
   linha
   pausar
   MenuPHP

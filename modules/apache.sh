@@ -62,6 +62,12 @@ InstalarLamp(){
 
   # ── Passo 2 ───────────────────────────────────────────────────────────────
   passo 2 $TOTAL "Instalar Apache2"
+  if systemctl is-active --quiet nginx 2>/dev/null; then
+    aviso "Nginx está ativo na porta 80 e será parado para o Apache assumir."
+    sudo systemctl stop nginx
+    sudo systemctl disable nginx
+    ok "Nginx parado e desabilitado (porta 80)."
+  fi
   if ja_instalado apache2; then
     aviso "Apache2 já está instalado — pulando."
   else
