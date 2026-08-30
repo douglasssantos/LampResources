@@ -187,3 +187,102 @@ _selecionar_multiplo(){
   done
 }
 
+# ─── SSL Wildcard (Let's Encrypt / DNS-01) ────────────────────────────────────
+# Normaliza entrada: "veskops.com *.veskops.com" ou "*.veskops.com" → veskops.com
+_ssl_normalizar_dominio(){
+  local bruto="$1"
+  bruto="${bruto#http://}"
+  bruto="${bruto#https://}"
+  bruto="${bruto%%/*}"
+  bruto=$(echo "$bruto" | awk '{print $1}')
+  bruto="${bruto#\*.}"
+  echo "$bruto"
+}
+
+_ssl_adicionar_alias_wildcard(){
+  local dominio="$1"
+  local apache_conf="/etc/apache2/sites-available/${dominio}.conf"
+  local nginx_conf="/etc/nginx/sites-available/${dominio}.conf"
+
+  if [[ -f "$apache_conf" ]] && ! grep -q "\*\.${dominio}" "$apache_conf"; then
+    if grep -q "ServerAlias" "$apache_conf"; then
+      sudo sed -i "s/ServerAlias \(.*\)/ServerAlias \1 *.${dominio}/" "$apache_conf"
+    else
+      sudo sed -i "/ServerName ${dominio}/a\       ServerAlias *.${dominio}" "$apache_conf"
+    fi
+  fi
+
+  if [[ -f "$nginx_conf" ]] && ! grep -q "\*\.${dominio}" "$nginx_conf"; then
+    sudo sed -i "s/server_name ${dominio} www.${dominio};/server_name ${dominio} www.${dominio} *.${dominio};/" "$nginx_conf"
+    sudo sed -i "s/server_name ${dominio};/server_name ${dominio} *.${dominio};/" "$nginx_conf"
+  fi
+}
+
+# Uso: _ssl_gerar_wildcard <dominio> [apache|nginx]
+# Emite certificado para dominio + *.dominio via desafio DNS.
+_ssl_gerar_wildcard(){
+  local dominio="$1"
+  local instalador="${2:-}"
+
+  dominio=$(_ssl_normalizar_dominio "$dominio")
+  if [[ -z "$dominio" ]]; then
+    erro "Domínio inválido."
+    return 1
+  fi
+
+  if ! command -v certbot &>/dev/null; then
+    erro "Certbot não está instalado. Instale o stack primeiro."
+    return 1
+  fi
+
+  linha
+  aviso "Certificados wildcard exigem validação DNS (Let's Encrypt)."
+  echo
+  item "Será emitido para:  ${NEGRITO}${dominio}${RESET}  e  ${NEGRITO}*.${dominio}${RESET}"
+  item "O Certbot vai pedir um registro TXT, por exemplo:"
+  echo
+  echo "    ${CIANO}_acme-challenge.${dominio}${RESET}    TXT    ${AMARELO_CLARO}<valor gerado>${RESET}"
+  echo
+  item "Crie o registro no DNS e aguarde a propagação antes de continuar."
+  aviso "A renovação automática não funciona no modo manual — será preciso repetir o TXT."
+  linha
+  entrada "Pressione ENTER para iniciar o Certbot..."
+  read
+
+  info "Solicitando certificado wildcard..."
+  if ! sudo certbot certonly \
+      --manual \
+      --preferred-challenges dns \
+      --agree-tos \
+      -m "$email" \
+      --cert-name "$dominio" \
+      -d "$dominio" \
+      -d "*.${dominio}" \
+      --expand \
+      --manual-public-ip-logging-ok; then
+    erro "Falha ao gerar o certificado wildcard."
+    return 1
+  fi
+
+  ok "Certificado emitido em /etc/letsencrypt/live/${dominio}/"
+  _ssl_adicionar_alias_wildcard "$dominio"
+
+  if [[ "$instalador" == "nginx" ]] && ja_instalado nginx; then
+    info "Instalando certificado no Nginx..."
+    sudo certbot install --nginx --cert-name "$dominio" --redirect -n 2>/dev/null \
+      || aviso "Instale o certificado manualmente nos server blocks, se necessário."
+    sudo nginx -t && sudo systemctl reload nginx
+  elif [[ "$instalador" == "apache" ]] && ja_instalado apache2; then
+    info "Instalando certificado no Apache..."
+    sudo certbot install --apache --cert-name "$dominio" --redirect -n 2>/dev/null \
+      || aviso "Instale o certificado manualmente nos VirtualHosts, se necessário."
+    sudo apache2ctl configtest && sudo systemctl reload apache2
+  fi
+
+  ok "Wildcard ativo: ${dominio}  e  *.${dominio}"
+  echo
+  echo "  ${NEGRITO}${VERDE_CLARO}  HTTPS ${RESET}  https://${dominio}"
+  echo "  ${NEGRITO}${VERDE_CLARO}  HTTPS ${RESET}  https://qualquer-sub.${dominio}"
+  return 0
+}
+

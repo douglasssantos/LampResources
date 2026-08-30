@@ -18,16 +18,19 @@ _nginx_fpm_sock(){
 _nginx_escrever_site(){
   local dominio="$1"
   local path="$2"
+  local wildcard="${3:-}"
   local root="/var/www/${dominio}${path}"
-  local sock
+  local sock names
   sock=$(_nginx_fpm_sock)
+  names="${dominio} www.${dominio}"
+  [[ "$wildcard" == "wildcard" ]] && names="${dominio} www.${dominio} *.${dominio}"
 
   sudo mkdir -p /etc/nginx/sites-available /etc/nginx/sites-enabled
   sudo tee "/etc/nginx/sites-available/${dominio}.conf" >/dev/null <<EOF
 server {
     listen 80;
     listen [::]:80;
-    server_name ${dominio} www.${dominio};
+    server_name ${names};
     root ${root};
     index index.php index.html index.htm;
 
@@ -289,6 +292,11 @@ AdicionarDominioOnlineNginx(){
   entrada "Pasta root dentro do projeto (ex: /public ou deixe vazio):"
   read path
   sep
+  _selecionar "Tipo de certificado SSL" "Padrão (dominio + www)" "Wildcard (dominio + *.dominio)" || { MenuNginx; return; }
+  local tipo_ssl="$_SELECIONADO"
+  local flag_wildcard=""
+  [[ "$tipo_ssl" == "Wildcard (dominio + *.dominio)" ]] && flag_wildcard="wildcard"
+  sep
 
   info "Criando pasta /var/www/$dominio..."
   sudo mkdir -p /var/www/$dominio
@@ -298,7 +306,7 @@ AdicionarDominioOnlineNginx(){
   ok "Pasta criada!"
   sep
   info "Criando server block do Nginx..."
-  _nginx_escrever_site "$dominio" "$path"
+  _nginx_escrever_site "$dominio" "$path" "$flag_wildcard"
   ok "Server block criado!"
   sep
   info "Reiniciando Nginx..."
@@ -320,12 +328,17 @@ AdicionarDominioOnlineNginx(){
   sudo ufw allow 'Nginx Full'
   sudo ufw delete allow 'Nginx HTTP' 2>/dev/null || true
   sep
-  info "Obtendo certificado SSL via Certbot..."
-  sudo certbot run -n --nginx --agree-tos -d $dominio,www.$dominio -m $email --redirect
-  sep
-  info "Verificando renovação automática..."
-  sudo systemctl status certbot.timer
-  sudo certbot renew --dry-run
+  if [[ "$tipo_ssl" == "Wildcard (dominio + *.dominio)" ]]; then
+    info "Obtendo certificado SSL wildcard via Certbot (DNS)..."
+    _ssl_gerar_wildcard "$dominio" nginx
+  else
+    info "Obtendo certificado SSL via Certbot..."
+    sudo certbot run -n --nginx --agree-tos -d $dominio,www.$dominio -m $email --redirect
+    sep
+    info "Verificando renovação automática..."
+    sudo systemctl status certbot.timer
+    sudo certbot renew --dry-run
+  fi
   sep
   info "Reiniciando Nginx..."
   sudo systemctl restart nginx
@@ -334,6 +347,9 @@ AdicionarDominioOnlineNginx(){
   echo
   echo "  ${NEGRITO}${VERDE_CLARO}  HTTP  ${RESET}  http://$dominio"
   echo "  ${NEGRITO}${VERDE_CLARO}  HTTPS ${RESET}  https://$dominio"
+  if [[ "$tipo_ssl" == "Wildcard (dominio + *.dominio)" ]]; then
+    echo "  ${NEGRITO}${VERDE_CLARO}  HTTPS ${RESET}  https://qualquer-sub.$dominio"
+  fi
   linha
   pausar
   MenuNginx
@@ -416,6 +432,17 @@ renovar_ssl_nginx(){
   info "Renovando SSL para $dominio..."
   certbot certonly --force-renew -d $dominio
   ok "SSL do domínio $dominio renovado com sucesso!"
+  linha
+  pausar
+  MenuNginx
+}
+
+GerarSslWildcardNginx(){
+  titulo "Gerar Certificado Wildcard"
+  entrada "Domínio (ex: veskops.com ou veskops.com *.veskops.com):"
+  read dominio
+  sep
+  _ssl_gerar_wildcard "$dominio" nginx
   linha
   pausar
   MenuNginx
@@ -671,20 +698,21 @@ MenuNginx(){
   opcao_menu  5 "Remover Domínio"
   opcao_menu  6 "Aplicar Permissões em Domínio"
   opcao_menu  7 "Renovar SSL"
-  opcao_menu  8 "Verificar Status do Nginx"
-  opcao_menu  9 "Redefinir Config do Nginx"
+  opcao_menu  8 "Gerar certificado Wildcard (*.dominio)"
+  opcao_menu  9 "Verificar Status do Nginx"
+  opcao_menu 10 "Redefinir Config do Nginx"
   sep
-  opcao_menu 10 "Clonar Site"
-  opcao_menu 11 "Limpar Site"
-  opcao_menu 12 "Listar Domínios Ativos"
+  opcao_menu 11 "Clonar Site"
+  opcao_menu 12 "Limpar Site"
+  opcao_menu 13 "Listar Domínios Ativos"
   sep
-  opcao_menu 13 "Backup de Site"
-  opcao_menu 14 "Restaurar Backup de Site"
-  opcao_menu 15 "Listar Backups"
+  opcao_menu 14 "Backup de Site"
+  opcao_menu 15 "Restaurar Backup de Site"
+  opcao_menu 16 "Listar Backups"
   sep
-  opcao_menu 16 "Ver Log de Erros do Nginx"
-  opcao_menu 17 "Ver Log de Acesso do Nginx"
-  opcao_menu 18 "Ver Logs de um Domínio"
+  opcao_menu 17 "Ver Log de Erros do Nginx"
+  opcao_menu 18 "Ver Log de Acesso do Nginx"
+  opcao_menu 19 "Ver Logs de um Domínio"
   echo
   opcao_menu  0 "Voltar ao Menu Principal"
   echo
@@ -699,17 +727,18 @@ MenuNginx(){
     5) RemoveDominioNginx;;
     6) AplicarPermissoesNginx;;
     7) renovar_ssl_nginx;;
-    8) VerificaNginx;;
-    9) RedefinirConfigNginx;;
-    10) ClonarSiteNginx;;
-    11) LimparSiteNginx;;
-    12) ListarDominiosNginx;;
-    13) BackupSiteNginx;;
-    14) RestaurarBackupSiteNginx;;
-    15) ListarBackupsNginx;;
-    16) VerLogsErroNginx;;
-    17) VerLogsAcessoNginx;;
-    18) VerLogsDominioNginx;;
+    8) GerarSslWildcardNginx;;
+    9) VerificaNginx;;
+    10) RedefinirConfigNginx;;
+    11) ClonarSiteNginx;;
+    12) LimparSiteNginx;;
+    13) ListarDominiosNginx;;
+    14) BackupSiteNginx;;
+    15) RestaurarBackupSiteNginx;;
+    16) ListarBackupsNginx;;
+    17) VerLogsErroNginx;;
+    18) VerLogsAcessoNginx;;
+    19) VerLogsDominioNginx;;
     0) Menu;;
     *) erro "Opção inválida!" ; sleep 1 ; MenuNginx ;;
   esac

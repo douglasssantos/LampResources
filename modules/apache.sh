@@ -225,6 +225,11 @@ AdicionarDominioOnline(){
   entrada "Pasta root dentro do projeto (ex: /public ou deixe vazio):"
   read path
   sep
+  _selecionar "Tipo de certificado SSL" "Padrão (dominio + www)" "Wildcard (dominio + *.dominio)" || { MenuApache; return; }
+  local tipo_ssl="$_SELECIONADO"
+  local alias_extra="www.$dominio"
+  [[ "$tipo_ssl" == "Wildcard (dominio + *.dominio)" ]] && alias_extra="www.$dominio *.$dominio"
+  sep
   vhostconf="
   <VirtualHost *:80>\n
       <Directory /var/www/$dominio$path>\n
@@ -235,7 +240,7 @@ AdicionarDominioOnline(){
 
        ServerAdmin webmaster@$dominio\n
        ServerName $dominio\n
-       ServerAlias www.$dominio\n
+       ServerAlias $alias_extra\n
        DocumentRoot /var/www/$dominio$path\n
        ErrorLog ${APACHE_LOG_DIR}/error.log\n
        CustomLog ${APACHE_LOG_DIR}/access.log combined\n
@@ -275,12 +280,17 @@ AdicionarDominioOnline(){
   sudo ufw allow 'Apache Full'
   sudo ufw delete allow 'Apache'
   sep
-  info "Obtendo certificado SSL via Certbot..."
-  sudo certbot run -n --apache --agree-tos -d $dominio,www.$dominio -m $email --redirect
-  sep
-  info "Verificando renovação automática..."
-  sudo systemctl status certbot.timer
-  sudo certbot renew --dry-run
+  if [[ "$tipo_ssl" == "Wildcard (dominio + *.dominio)" ]]; then
+    info "Obtendo certificado SSL wildcard via Certbot (DNS)..."
+    _ssl_gerar_wildcard "$dominio" apache
+  else
+    info "Obtendo certificado SSL via Certbot..."
+    sudo certbot run -n --apache --agree-tos -d $dominio,www.$dominio -m $email --redirect
+    sep
+    info "Verificando renovação automática..."
+    sudo systemctl status certbot.timer
+    sudo certbot renew --dry-run
+  fi
   sep
   info "Reiniciando Apache..."
   sudo systemctl restart apache2
@@ -289,6 +299,9 @@ AdicionarDominioOnline(){
   echo
   echo "  ${NEGRITO}${VERDE_CLARO}  HTTP  ${RESET}  http://$dominio"
   echo "  ${NEGRITO}${VERDE_CLARO}  HTTPS ${RESET}  https://$dominio"
+  if [[ "$tipo_ssl" == "Wildcard (dominio + *.dominio)" ]]; then
+    echo "  ${NEGRITO}${VERDE_CLARO}  HTTPS ${RESET}  https://qualquer-sub.$dominio"
+  fi
   linha
   pausar
   MenuApache
@@ -382,6 +395,16 @@ renovar_ssl(){
   info "Renovando SSL para $dominio..."
   certbot certonly --force-renew -d $dominio
   ok "SSL do domínio $dominio renovado com sucesso!"
+  linha
+  pausar
+  MenuApache
+}
+GerarSslWildcardApache(){
+  titulo "Gerar Certificado Wildcard"
+  entrada "Domínio (ex: veskops.com ou veskops.com *.veskops.com):"
+  read dominio
+  sep
+  _ssl_gerar_wildcard "$dominio" apache
   linha
   pausar
   MenuApache
@@ -609,20 +632,21 @@ MenuApache(){
   opcao_menu  5 "Remover Domínio"
   opcao_menu  6 "Aplicar Permissões em Domínio"
   opcao_menu  7 "Renovar SSL"
-  opcao_menu  8 "Verificar Status do Apache"
-  opcao_menu  9 "Redefinir Config do Apache"
+  opcao_menu  8 "Gerar certificado Wildcard (*.dominio)"
+  opcao_menu  9 "Verificar Status do Apache"
+  opcao_menu 10 "Redefinir Config do Apache"
   sep
-  opcao_menu 10 "Clonar Site"
-  opcao_menu 11 "Limpar Site"
-  opcao_menu 12 "Listar Domínios Ativos"
+  opcao_menu 11 "Clonar Site"
+  opcao_menu 12 "Limpar Site"
+  opcao_menu 13 "Listar Domínios Ativos"
   sep
-  opcao_menu 13 "Backup de Site"
-  opcao_menu 14 "Restaurar Backup de Site"
-  opcao_menu 15 "Listar Backups"
+  opcao_menu 14 "Backup de Site"
+  opcao_menu 15 "Restaurar Backup de Site"
+  opcao_menu 16 "Listar Backups"
   sep
-  opcao_menu 16 "Ver Log de Erros do Apache"
-  opcao_menu 17 "Ver Log de Acesso do Apache"
-  opcao_menu 18 "Ver Logs de um Domínio"
+  opcao_menu 17 "Ver Log de Erros do Apache"
+  opcao_menu 18 "Ver Log de Acesso do Apache"
+  opcao_menu 19 "Ver Logs de um Domínio"
   echo
   opcao_menu  0 "Voltar ao Menu Principal"
   echo
@@ -637,17 +661,18 @@ MenuApache(){
     5) RemoveDominio;;
     6) AplicarPermissoes;;
     7) renovar_ssl;;
-    8) VerificaApache;;
-    9) RedefinirConfigApache;;
-    10) ClonarSite;;
-    11) LimparSite;;
-    12) ListarDominios;;
-    13) BackupSite;;
-    14) RestaurarBackupSite;;
-    15) ListarBackups;;
-    16) VerLogsErroApache;;
-    17) VerLogsAcessoApache;;
-    18) VerLogsDominio;;
+    8) GerarSslWildcardApache;;
+    9) VerificaApache;;
+    10) RedefinirConfigApache;;
+    11) ClonarSite;;
+    12) LimparSite;;
+    13) ListarDominios;;
+    14) BackupSite;;
+    15) RestaurarBackupSite;;
+    16) ListarBackups;;
+    17) VerLogsErroApache;;
+    18) VerLogsAcessoApache;;
+    19) VerLogsDominio;;
     0) Menu;;
     *) erro "Opção inválida!" ; sleep 1 ; MenuApache ;;
   esac

@@ -28,7 +28,7 @@ Com ele você gerencia todo o seu ambiente de desenvolvimento e produção a par
 |---|---|
 | Instalar / Desinstalar o LAMP completo | Adicionar domínios online com SSL automático (Certbot) |
 | Adicionar domínios locais de desenvolvimento | Remover domínios do vHost |
-| Aplicar permissões em domínios | Renovar certificados SSL |
+| Aplicar permissões em domínios | Renovar certificados SSL / **Wildcard** (`*.dominio`) |
 | Clonar / Limpar sites | Listar domínios ativos |
 | **Backup de sites** (`.tar.gz` com timestamp) | **Restaurar backups de sites** |
 | Ver logs de erro e acesso do Apache | Redefinir configurações do Apache |
@@ -38,7 +38,7 @@ Com ele você gerencia todo o seu ambiente de desenvolvimento e produção a par
 |---|---|
 | Instalar / Desinstalar o LEMP completo | Adicionar domínios online com SSL automático (Certbot) |
 | Adicionar domínios locais de desenvolvimento | Remover server blocks do Nginx |
-| Aplicar permissões em domínios | Renovar certificados SSL |
+| Aplicar permissões em domínios | Renovar certificados SSL / **Wildcard** (`*.dominio`) |
 | Clonar / Limpar sites | Listar domínios e sites habilitados |
 | **Backup de sites** (`.tar.gz` com timestamp) | **Restaurar backups de sites** |
 | Ver logs de erro e acesso do Nginx | Redefinir configurações do Nginx |
